@@ -7,6 +7,7 @@ import { SidebarProvider } from '@/components/Sidebar/SidebarProvider'
 import MainContent from '@/components/MainContent'
 import AnalyticsProvider from '@/components/AnalyticsProvider'
 import { Toaster, toast } from 'sonner'
+import { X } from 'lucide-react'
 import "sonner/dist/styles.css"
 import { useState, useEffect, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
@@ -30,7 +31,6 @@ import { isAudioExtension, getAudioFormatsDisplayList } from '@/constants/audioF
 import GlobalSearchDialog from '@/components/GlobalSearchDialog'
 import CrashReportDialog from '@/components/CrashReportDialog'
 import { getPendingCrashReport, type PendingCrashReport } from '@/services/crashReportService'
-import { Button } from '@/components/ui/button'
 
 
 const inter = Inter({
@@ -76,12 +76,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const isMinibar = pathname.startsWith('/minibar')
+  const isMinibar = (pathname ?? '').startsWith('/minibar')
   const [showOnboarding, setShowOnboarding] = useState(false)
-  const [onboardingCompleted, setOnboardingCompleted] = useState(false)
-  const [startupResolved, setStartupResolved] = useState(false)
-  const [startupError, setStartupError] = useState<string | null>(null)
-  const [startupAttempt, setStartupAttempt] = useState(0)
+  const [onboardingCompleted, setOnboardingCompleted] = useState(true)
+  // These no longer gate the first paint. A slow onboarding command must not
+  // leave the window on a blank startup screen.
+  const startupResolved = true
+  const startupError = null
   const [pendingCrashReport, setPendingCrashReport] = useState<PendingCrashReport | null>(null)
 
   // Import audio state
@@ -96,38 +97,33 @@ export default function RootLayout({
 
   useEffect(() => {
     let cancelled = false
+    const timer = window.setTimeout(() => {
+      cancelled = true
+    }, 8000)
 
     const initializeStartup = async () => {
-      setStartupResolved(false)
-      setStartupError(null)
       try {
         const status = await invoke<{ completed: boolean } | null>('get_onboarding_status')
         if (cancelled) return
         const isComplete = status?.completed ?? false
         setOnboardingCompleted(isComplete)
+        setShowOnboarding(!isComplete)
 
-        if (!isComplete) {
-          console.log('[Layout] Onboarding not completed, showing onboarding flow')
-          setShowOnboarding(true)
-        } else {
-          console.log('[Layout] Onboarding completed, showing main app')
+        if (isComplete) {
           const report = await getPendingCrashReport()
           if (!cancelled) setPendingCrashReport(report)
         }
       } catch (error) {
         console.error('[Layout] Failed to resolve startup state:', error)
-        if (cancelled) return
-        setStartupError('Meetily could not verify local startup and crash-report state.')
-      } finally {
-        if (!cancelled) setStartupResolved(true)
       }
     }
 
-    initializeStartup()
+    void initializeStartup()
     return () => {
       cancelled = true
+      window.clearTimeout(timer)
     }
-  }, [startupAttempt])
+  }, [])
 
   // Disable context menu in production
   useEffect(() => {
@@ -354,19 +350,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`dark ${inter.variable} ${inter.className}`}>
       <body className="font-sans antialiased">
-        {!startupResolved ? (
-          <div className="h-screen bg-[var(--af-bg)]" />
-        ) : startupError ? (
-          <div className="flex h-screen items-center justify-center bg-[var(--af-bg)] px-6">
-            <div className="max-w-md rounded-xl border border-[var(--af-border)] bg-[var(--af-panel)] p-6 text-center shadow-xl">
-              <h1 className="text-lg font-semibold text-[var(--af-text)]">Startup check failed</h1>
-              <p className="mt-2 text-sm text-[var(--af-text-2)]">{startupError}</p>
-              <Button className="mt-5" onClick={() => setStartupAttempt((value) => value + 1)}>
-                Retry
-              </Button>
-            </div>
-          </div>
-        ) : pendingCrashReport ? (
+        {pendingCrashReport ? (
           <>
             <div className="h-screen bg-[var(--af-bg)]" />
             <CrashReportDialog
@@ -419,7 +403,20 @@ export default function RootLayout({
           </AnalyticsProvider>
         )}
 
-        <Toaster position="bottom-center" theme="dark" richColors closeButton />
+        <Toaster
+          position="top-center"
+          theme="dark"
+          closeButton
+          offset={20}
+          icons={{ close: <X className="h-4 w-4" /> }}
+          toastOptions={{
+            classNames: {
+              toast: 'af-toast',
+              title: 'text-sm font-medium text-[var(--af-text)]',
+              description: 'text-xs text-[var(--af-text-2)]',
+            },
+          }}
+        />
       </body>
     </html>
   )

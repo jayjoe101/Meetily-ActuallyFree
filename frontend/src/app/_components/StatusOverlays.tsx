@@ -1,3 +1,5 @@
+import { Spinner } from '@/components/ui/spinner';
+
 interface StatusOverlaysProps {
   // Status flags
   isProcessing: boolean;      // Processing transcription after recording stops
@@ -27,7 +29,7 @@ function StatusOverlay({ show, message, sidebarCollapsed }: StatusOverlayProps) 
       >
         <div className="w-2/3 max-w-[750px] flex justify-center">
           <div className="bg-white rounded-lg shadow-lg px-4 py-2 flex items-center space-x-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+            <Spinner size={16} className="text-[var(--af-text)]" />
             <span className="text-sm text-gray-700">{message}</span>
           </div>
         </div>

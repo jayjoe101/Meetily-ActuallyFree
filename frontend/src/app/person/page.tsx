@@ -1,4 +1,5 @@
 'use client';
+import { Spinner } from '@/components/ui/spinner';
 
 /**
  * Static-export-compatible person profile route. People are runtime SQLite
@@ -18,8 +19,7 @@ import {
   Bot,
   CalendarDays,
   Clock3,
-  FileText,
-  Loader2,
+  FileText, 
   LockKeyhole,
   MessageSquareText,
   RefreshCw,
@@ -320,7 +320,7 @@ function PersonProfileContent() {
               <div className="p-5 sm:p-6">
                 {overviewLoading ? (
                   <div className="flex min-h-40 flex-col items-center justify-center gap-3 text-sm text-[var(--af-text-2)]">
-                    <Loader2 className="h-5 w-5 animate-spin text-cyan-400" />
+                    <Spinner className="h-5 w-5 text-cyan-400" />
                     Reviewing meeting records and citations...
                   </div>
                 ) : overview ? (
@@ -427,7 +427,7 @@ function PersonProfileContent() {
                   disabled={!notesDirty || savingNotes}
                   className="inline-flex items-center gap-2 rounded-lg bg-[var(--af-accent)] px-3 py-2 text-xs font-semibold text-white hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {savingNotes ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                  {savingNotes ? <Spinner className="h-3.5 w-3.5 " /> : <Save className="h-3.5 w-3.5" />}
                   Save notes
                 </button>
               </div>
@@ -451,7 +451,7 @@ function PersonProfileContent() {
                       </div>
                       <div className={`rounded-xl bg-[var(--af-panel-2)] px-3 py-2.5 text-xs leading-relaxed ${message.status === 'error' ? 'text-red-400' : 'text-[var(--af-text-2)]'}`}>
                         {message.status === 'pending' ? (
-                          <span className="inline-flex items-center gap-2 text-[var(--af-text-3)]"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Checking the records...</span>
+                          <span className="inline-flex items-center gap-2 text-[var(--af-text-3)]"><Spinner className="h-3.5 w-3.5 " /> Checking the records...</span>
                         ) : message.status === 'error' ? (
                           <>Couldn't answer: {message.answer}</>
                         ) : (
@@ -488,7 +488,7 @@ function PersonProfileContent() {
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--af-accent)] text-white hover:brightness-110 disabled:opacity-40"
                       aria-label="Ask AI"
                     >
-                      {asking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                      {asking ? <Spinner className="h-3.5 w-3.5 " /> : <Send className="h-3.5 w-3.5" />}
                     </button>
                   </div>
                 </div>

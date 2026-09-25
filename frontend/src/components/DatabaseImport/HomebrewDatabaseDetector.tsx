@@ -1,9 +1,10 @@
 'use client';
+import { Spinner } from '@/components/ui/spinner';
 
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
-import { Database, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
+import { Database, AlertCircle,  CheckCircle2 } from 'lucide-react';
 
 interface HomebrewDatabaseDetectorProps {
   onImportSuccess: () => void;
@@ -124,7 +125,7 @@ export function HomebrewDatabaseDetector({ onImportSuccess, onDecline }: Homebre
             >
               {isImporting ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Spinner className="h-4 w-4 " />
                   <span>Importing...</span>
                 </>
               ) : (

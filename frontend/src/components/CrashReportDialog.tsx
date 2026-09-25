@@ -1,7 +1,8 @@
 'use client'
+import { Spinner } from '@/components/ui/spinner';
 
 import { useState } from 'react'
-import { FileArchive, Loader2, Send, ShieldCheck } from 'lucide-react'
+import { FileArchive, Send, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -148,15 +149,15 @@ export default function CrashReportDialog({ report, onResolved }: CrashReportDia
 
           <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-3">
             <Button variant="ghost" onClick={handleIgnore} disabled={busy}>
-              {pendingAction === 'ignore' && <Loader2 className="animate-spin" />}
+              {pendingAction === 'ignore' && <Spinner className="" />}
               Ignore
             </Button>
             <Button variant="outline" onClick={handleSave} disabled={busy}>
-              {pendingAction === 'save' ? <Loader2 className="animate-spin" /> : <FileArchive />}
+              {pendingAction === 'save' ? <Spinner className="" /> : <FileArchive />}
               Save ZIP
             </Button>
             <Button onClick={handleSend} disabled={busy}>
-              {pendingAction === 'send' ? <Loader2 className="animate-spin" /> : <Send />}
+              {pendingAction === 'send' ? <Spinner className="" /> : <Send />}
               Send Report
             </Button>
           </div>

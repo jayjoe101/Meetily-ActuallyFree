@@ -17,18 +17,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
-import { Loader2, Sparkles, Users } from 'lucide-react';
+
 import { toast } from 'sonner';
 import { useConfig } from '@/contexts/ConfigContext';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { useSidebar } from '@/components/Sidebar/SidebarProvider';
+import { PostCallHandoffCard } from '@/components/PostCallHandoffCard';
 import type { RawModelInfo } from '@/hooks/useTranscriptionModels';
 import { isVisibleParakeetModel } from '@/lib/parakeet';
 
@@ -196,7 +189,8 @@ export function PostCallProcessingDialog({
   onComplete: () => void;
 }) {
   const { selectedLanguage, transcriptModelConfig } = useConfig();
-  const [stage, setStage] = useState<Stage>('idle');
+  const { isCollapsed: sidebarCollapsed } = useSidebar();
+  const [stage, setStage] = useState<Stage>(enabled ? 'prompt' : 'idle');
   const [speakerCount, setSpeakerCount] = useState('2');
   const [autoDetectSpeakers, setAutoDetectSpeakers] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -359,129 +353,100 @@ export function PostCallProcessingDialog({
   const isWorking = stage === 'enhancing' || stage === 'diarizing' || stage === 'refreshing';
   const visibleProgress = Math.max(4, Math.min(100, progress));
 
-  // DialogContent already renders a compact X button. At the count prompt that
-  // X means "keep the live transcript": skip only retranscription, then still
-  // run speaker identification and unblock the fresh-summary stage.
-  const handleOpenChange = (open: boolean) => {
-    if (open || isWorking) return;
-    if (stage === 'prompt') {
-      void skipEnhancement();
-    } else if (stage === 'error') {
-      void continueWithLiveTranscript();
-    }
-  };
+  if (stage === 'idle') return null;
+
+  const choiceClass = (selected: boolean) =>
+    `h-9 rounded-lg border text-sm font-semibold transition-colors ${
+      selected
+        ? 'border-[#4a8bff] bg-[#4a8bff] text-white'
+        : 'border-white/15 bg-white/10 text-white hover:bg-white/15'
+    }`;
 
   return (
-    <>
-      <Dialog open={stage === 'prompt' || stage === 'error'} onOpenChange={handleOpenChange}>
-        <DialogContent
-          aria-describedby="post-call-processing-description"
-          className="sm:max-w-md"
-          onEscapeKeyDown={(event) => event.preventDefault()}
-          onPointerDownOutside={(event) => event.preventDefault()}
-        >
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Users size={18} className="text-blue-400" />
-              How many people spoke?
-            </DialogTitle>
-            <DialogDescription id="post-call-processing-description">
-              Include yourself in the total. Entering the actual number gives more accurate speaker labels, or choose Auto-detect if you are not sure.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="grid grid-cols-4 gap-2">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((count) => (
-                <Button
-                  key={count}
-                  type="button"
-                  variant={!autoDetectSpeakers && speakerCount === String(count) ? 'default' : 'outline'}
-                  onClick={() => {
-                    setSpeakerCount(String(count));
-                    setAutoDetectSpeakers(false);
-                    setError(null);
-                  }}
-                >
-                  {count}
-                </Button>
-              ))}
-              <Button
+    <PostCallHandoffCard
+      sidebarCollapsed={sidebarCollapsed}
+      busy={isWorking}
+      title={
+        isWorking
+          ? 'Improving the transcript'
+          : stage === 'error'
+            ? 'Could not finish that step'
+            : 'How many people spoke?'
+      }
+      detail={
+        isWorking
+          ? message
+          : 'Include yourself. A real count labels speakers more accurately.'
+      }
+    >
+      {isWorking ? (
+        <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+          <div
+            className="h-full rounded-full bg-white/80 transition-[width] duration-300"
+            style={{ width: `${visibleProgress}%` }}
+          />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="grid grid-cols-4 gap-2">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((count) => (
+              <button
+                key={count}
                 type="button"
-                className="col-span-4"
-                variant={autoDetectSpeakers ? 'default' : 'outline'}
+                className={choiceClass(!autoDetectSpeakers && speakerCount === String(count))}
                 onClick={() => {
-                  setAutoDetectSpeakers(true);
+                  setSpeakerCount(String(count));
+                  setAutoDetectSpeakers(false);
                   setError(null);
                 }}
               >
-                Auto-detect
-              </Button>
-            </div>
-            <input
-              type="number"
-              min={1}
-              max={20}
-              value={autoDetectSpeakers ? '' : speakerCount}
-              placeholder={autoDetectSpeakers ? 'Speakers will be detected automatically' : undefined}
-              onFocus={() => setAutoDetectSpeakers(false)}
-              onChange={(event) => {
-                setSpeakerCount(event.target.value);
-                setAutoDetectSpeakers(false);
+                {count}
+              </button>
+            ))}
+            <button
+              type="button"
+              className={`col-span-4 ${choiceClass(autoDetectSpeakers)}`}
+              onClick={() => {
+                setAutoDetectSpeakers(true);
+                setError(null);
               }}
-              className="w-full rounded-md border border-[var(--af-border)] bg-[var(--af-panel-2)] px-3 py-2 text-sm text-[var(--af-text)] outline-none focus:ring-2 focus:ring-blue-500"
-              aria-label="Total number of speakers"
-            />
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            >
+              Auto-detect
+            </button>
           </div>
-
-          <DialogFooter>
-            {stage === 'error' && (
-              <Button type="button" variant="outline" onClick={continueWithLiveTranscript}>
-                Use live transcript
-              </Button>
-            )}
-            <Button type="button" onClick={start}>
-              {stage === 'error' ? 'Retry' : 'Enhance meeting'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {isWorking && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="fixed bottom-4 right-4 z-40 w-[min(24rem,calc(100vw-2rem))] rounded-xl border border-[var(--af-border)] bg-[var(--af-panel)] p-4 shadow-2xl"
-        >
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 rounded-lg bg-blue-500/10 p-2 text-blue-400">
-              <Sparkles size={17} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-[var(--af-text)]">Improving transcript</p>
-                <span className="shrink-0 text-xs tabular-nums text-[var(--af-text-3)]">
-                  {visibleProgress}%
-                </span>
-              </div>
-              <div className="mt-1 flex items-center gap-2 text-xs text-[var(--af-text-2)]">
-                <Loader2 size={13} className="shrink-0 animate-spin text-blue-400" />
-                <span className="truncate">{message}</span>
-              </div>
-              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--af-panel-2)]">
-                <div
-                  className="h-full rounded-full bg-blue-500 transition-[width] duration-300"
-                  style={{ width: `${visibleProgress}%` }}
-                />
-              </div>
-              <p className="mt-2 text-[11px] text-[var(--af-text-3)]">
-                You can keep reviewing the live transcript while this finishes.
-              </p>
-            </div>
+          <input
+            type="number"
+            min={1}
+            max={20}
+            value={autoDetectSpeakers ? '' : speakerCount}
+            placeholder={autoDetectSpeakers ? 'Speakers will be detected automatically' : undefined}
+            onFocus={() => setAutoDetectSpeakers(false)}
+            onChange={(event) => {
+              setSpeakerCount(event.target.value);
+              setAutoDetectSpeakers(false);
+            }}
+            className="af-bare w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-white/30"
+            aria-label="Total number of speakers"
+          />
+          {error && <p className="text-sm text-red-300">{error}</p>}
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => { void (stage === 'error' ? continueWithLiveTranscript() : skipEnhancement()); }}
+              className="rounded-lg px-3 py-2 text-sm text-white/70 hover:bg-white/10 hover:text-white"
+            >
+              Keep live transcript
+            </button>
+            <button
+              type="button"
+              onClick={() => { void start(); }}
+              className="rounded-lg bg-[#e8eef6] px-3 py-2 text-sm font-semibold text-[#0a0c10] hover:bg-[#f7f9fc]"
+            >
+              {stage === 'error' ? 'Retry' : 'Continue'}
+            </button>
           </div>
         </div>
       )}
-    </>
+    </PostCallHandoffCard>
   );
 }

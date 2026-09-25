@@ -334,7 +334,6 @@ export function useRecordingStop(
           // Mark as completed
           setStatus(RecordingStatus.COMPLETED);
 
-          // Auto-navigate after a short delay with source parameter
           setTimeout(() => {
             router.push(`/meeting-details?id=${meetingId}&source=recording`);
             clearTranscripts()
@@ -342,7 +341,7 @@ export function useRecordingStop(
 
             // Reset to IDLE after navigation
             setStatus(RecordingStatus.IDLE);
-          }, 2000);
+          }, 350);
           // Track meeting completion analytics
           try {
             // Calculate meeting duration from transcript timestamps

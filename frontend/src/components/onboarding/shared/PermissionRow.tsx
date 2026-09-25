@@ -1,5 +1,6 @@
 import React from 'react';
-import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+import { CheckCircle2,  XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { PermissionRowProps } from '@/types/onboarding';
@@ -66,7 +67,7 @@ export function PermissionRow({ icon, title, description, status, isPending = fa
             disabled={isChecking}
             className="min-w-[100px]"
           >
-            {isChecking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isChecking && <Spinner className="mr-2 h-4 w-4 " />}
             {getButtonText()}
           </Button>
         )}

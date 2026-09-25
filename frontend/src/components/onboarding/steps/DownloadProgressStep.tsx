@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { Spinner } from '@/components/ui/spinner';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { Mic, Sparkles, Check, Loader2, Download } from 'lucide-react';
+import { Mic, Sparkles, Check,  Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OnboardingContainer } from '../OnboardingContainer';
 import { useOnboarding } from '@/contexts/OnboardingContext';
@@ -405,7 +406,7 @@ export function DownloadProgressStep() {
             </span>
           )}
           {state.status === 'downloading' && (
-            <Loader2 className="w-5 h-5 text-gray-700 animate-spin" />
+            <Spinner className="w-5 h-5 text-gray-700 " />
           )}
           {state.status === 'completed' && (
             <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
@@ -527,7 +528,7 @@ export function DownloadProgressStep() {
             className="w-full h-11 bg-gray-900 hover:bg-gray-800 text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {(isCompleting || !parakeetDownloaded) ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Spinner className="w-4 h-4 mr-2 " />
             ) : (
               'Continue'
             )}

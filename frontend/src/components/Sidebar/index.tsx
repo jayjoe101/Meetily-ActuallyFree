@@ -667,6 +667,13 @@ const Sidebar: React.FC = () => {
   };
 
   const expanded = !isCollapsed;
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--af-sidebar-width', expanded ? '16rem' : '4rem');
+    return () => {
+      document.documentElement.style.removeProperty('--af-sidebar-width');
+    };
+  }, [expanded]);
   const isMeetingPage = Boolean(pathname?.includes('/meeting-details'));
   const isSettingsPage = pathname === '/settings';
   const meetingsTitle = sidebarItems.find((item) => item.id === 'meetings')?.title ?? 'Recent Meetings';

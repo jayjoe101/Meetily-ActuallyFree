@@ -1,8 +1,9 @@
 "use client";
+import { Spinner } from '@/components/ui/spinner';
 
 import { ToolbarButton as Button } from './ToolbarButton';
 import { ButtonGroup } from '@/components/ui/button-group';
-import { Copy, Save, Loader2, Search, FolderOpen, Download } from 'lucide-react';
+import { Copy, Save,  Search, FolderOpen, Download } from 'lucide-react';
 import Analytics from '@/lib/analytics';
 
 interface SummaryUpdaterButtonGroupProps {
@@ -42,7 +43,7 @@ export function SummaryUpdaterButtonGroup({
       >
         {isSaving ? (
           <>
-            <Loader2 className="animate-spin" />
+            <Spinner className="" />
             <span className="summary-action-label">Saving...</span>
           </>
         ) : (

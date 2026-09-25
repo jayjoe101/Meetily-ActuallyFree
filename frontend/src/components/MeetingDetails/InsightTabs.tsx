@@ -27,6 +27,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { Summary, Transcript } from '@/types';
+import { Spinner } from '@/components/ui/spinner';
 
 type Bucket = 'summary' | 'actions' | 'topics' | 'insights';
 
@@ -359,7 +360,7 @@ export function InsightTabs({
           </div>
           {generating ? (
             <div className="flex items-center gap-3 py-2 text-sm text-[var(--af-text-2)]">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--af-accent)] border-t-transparent" />
+              <Spinner className="h-4 w-4 text-[var(--af-accent)]" />
               Generating summary…
             </div>
           ) : !hasSummary ? (
@@ -399,7 +400,7 @@ export function InsightTabs({
           </div>
           {generating ? (
             <div className="flex items-center gap-3 py-2 text-sm text-[var(--af-text-2)]">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--af-accent)] border-t-transparent" />
+              <Spinner className="h-4 w-4 text-[var(--af-accent)]" />
               {hasSummary ? 'Regenerating action items…' : 'Generating action items…'}
             </div>
           ) : actions.length === 0 ? (
@@ -457,7 +458,7 @@ export function InsightTabs({
           <h3 className="mb-3 text-base font-semibold text-[var(--af-text)]">Key Topics</h3>
           {generating ? (
             <div className="flex items-center gap-3 py-2 text-sm text-[var(--af-text-2)]">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--af-accent)] border-t-transparent" />
+              <Spinner className="h-4 w-4 text-[var(--af-accent)]" />
               {hasSummary ? 'Regenerating topics…' : 'Generating topics…'}
             </div>
           ) : buckets.topics.length === 0 ? (

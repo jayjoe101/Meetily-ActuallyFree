@@ -1,4 +1,5 @@
 import React from 'react';
+import { Spinner } from './ui/spinner';
 
 export interface ChunkStatus {
   chunk_id: number;
@@ -221,7 +222,7 @@ export function ChunkProgressDisplay({
 
                   {chunk.status === 'processing' && (
                     <div className="flex items-center space-x-1">
-                      <div className="animate-spin w-3 h-3 border border-blue-600 border-t-transparent rounded-full"></div>
+                      <Spinner className="h-3 w-3 text-[var(--af-accent)]" />
                     </div>
                   )}
                 </div>

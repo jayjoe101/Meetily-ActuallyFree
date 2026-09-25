@@ -1,4 +1,5 @@
 "use client"
+import { Spinner } from '@/components/ui/spinner';
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { invoke } from "@tauri-apps/api/core"
@@ -132,7 +133,7 @@ export function DiarizationSettings() {
       {isDownloading && (
         <div className="mt-4 rounded-md border border-blue-200 bg-blue-50 p-4">
           <div className="flex items-center gap-2 text-sm font-medium text-blue-900">
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Spinner className="w-4 h-4 " />
             {progress?.status === 'verifying'
               ? `Verifying ${progress.file}…`
               : progress?.file

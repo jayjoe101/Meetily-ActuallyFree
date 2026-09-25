@@ -8,7 +8,7 @@ import { usePermissionCheck } from '@/hooks/usePermissionCheck';
 import { useRecordingState, RecordingStatus } from '@/contexts/RecordingStateContext';
 import { useTranscripts } from '@/contexts/TranscriptContext';
 import { useConfig } from '@/contexts/ConfigContext';
-import { StatusOverlays } from '@/app/_components/StatusOverlays';
+import { PostCallHandoffCard } from '@/components/PostCallHandoffCard';
 import Analytics from '@/lib/analytics';
 import { SettingsModals } from './_components/SettingsModal';
 import { TranscriptPanel } from './_components/TranscriptPanel';
@@ -222,7 +222,8 @@ export default function Home() {
         {/* Recording controls - only show when permissions are granted or already recording and not showing status messages */}
         {(hasMicrophone || isRecording) &&
           status !== RecordingStatus.PROCESSING_TRANSCRIPTS &&
-          status !== RecordingStatus.SAVING && (
+          status !== RecordingStatus.SAVING &&
+          status !== RecordingStatus.COMPLETED && (
             <div className="fixed bottom-12 left-0 right-0 z-30 pointer-events-none">
               <div
                 className="flex justify-center pl-8 transition-[margin] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none pointer-events-none"
@@ -253,12 +254,22 @@ export default function Home() {
             </div>
           )}
 
-        {/* Status Overlays - Processing and Saving */}
-        <StatusOverlays
-          isProcessing={status === RecordingStatus.PROCESSING_TRANSCRIPTS && !recordingState.isRecording}
-          isSaving={status === RecordingStatus.SAVING}
-          sidebarCollapsed={sidebarCollapsed}
-        />
+        {(status === RecordingStatus.PROCESSING_TRANSCRIPTS ||
+          status === RecordingStatus.SAVING ||
+          status === RecordingStatus.COMPLETED) && (
+          <PostCallHandoffCard
+            sidebarCollapsed={sidebarCollapsed}
+            busy
+            title={
+              status === RecordingStatus.SAVING
+                ? 'Saving your meeting'
+                : status === RecordingStatus.COMPLETED
+                  ? 'Opening your meeting'
+                  : 'Finishing your recording'
+            }
+            detail={recordingState.statusMessage || 'This stays here until the speaker question is ready.'}
+          />
+        )}
       </div>
     </motion.div>
   );

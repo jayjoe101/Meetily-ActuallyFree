@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, AlertCircle, Loader2 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+import { Download, AlertCircle} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -221,7 +222,7 @@ export function UpdateDialog({ open, onOpenChange, updateInfo }: UpdateDialogPro
             {isDownloading ? (
               <>
                 <span className="flex h-9 w-9 items-center justify-center rounded-full border border-cyan-400/25 bg-cyan-400/10">
-                  <Loader2 className="h-5 w-5 animate-spin text-cyan-300" />
+                  <Spinner className="h-5 w-5 text-cyan-300" />
                 </span>
                 {phase === 'installing' ? 'Installing Update' : 'Downloading Update'}
               </>

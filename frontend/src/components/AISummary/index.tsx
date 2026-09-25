@@ -5,6 +5,7 @@ import { Summary, Block } from '@/types';
 import { Section } from './Section';
 import { EditableTitle } from '../EditableTitle';
 import { ExclamationTriangleIcon, CheckCircleIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline';
+import { Spinner } from '@/components/ui/spinner';
 
 interface Props {
   summary: Summary | null;
@@ -606,7 +607,7 @@ export const AISummary = ({ summary, status, error, onSummaryChange, onRegenerat
   const renderLoadingState = () => (
     <div className="w-full p-4 bg-blue-50 border border-blue-200 rounded-lg">
       <div className="flex items-center space-x-3">
-        <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent"></div>
+        <Spinner className="h-5 w-5 text-[var(--af-accent)]" />
         <div>
           <h3 className="text-blue-700 font-medium">
             {status === 'processing' ? 'Processing Transcript' : 'Generating Summary'}

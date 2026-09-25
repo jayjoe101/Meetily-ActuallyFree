@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { Spinner } from '@/components/ui/spinner';
 import { getVersion } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
 import Image from 'next/image';
 import { UpdateDialog } from "./UpdateDialog";
 import { updateService, UpdateInfo } from '@/services/updateService';
 import { Button } from './ui/button';
-import { Loader2, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePlatform } from '@/hooks/usePlatform';
 
@@ -86,7 +87,7 @@ export function About() {
                         >
                             {isChecking ? (
                                 <>
-                                    <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                                    <Spinner className="h-3 w-3 mr-2 " />
                                     Checking...
                                 </>
                             ) : (

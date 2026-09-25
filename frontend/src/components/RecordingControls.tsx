@@ -37,6 +37,7 @@ import { UNAVAILABLE_DEVICE_VALUE, type AudioDeviceOption } from '@/lib/audio-de
 import type { RecordingPreferences } from '@/components/RecordingSettings';
 import type { SelectedDevices } from '@/components/DeviceSelection';
 import { RecordingVoiceLane } from '@/components/RecordingVoiceLane';
+import { Spinner } from '@/components/ui/spinner';
 
 interface RecordingControlsProps {
   isRecording: boolean;
@@ -539,15 +540,8 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
   return (
     <TooltipProvider>
       <div className="flex flex-col space-y-2">
-        <div className={`flex items-center rounded-3xl border border-white/10 bg-[#0f1218]/90 text-white shadow-2xl backdrop-blur-xl transition-[width,padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${isRecording ? 'w-full max-w-[640px] gap-3 px-4 py-3' : 'w-auto gap-4 px-4 py-3'}`}>
-          {isProcessing && !isParentProcessing ? (
-            <div className="flex items-center space-x-2">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              <span className="text-sm text-gray-300">Processing recording...</span>
-            </div>
-          ) : (
-            <>
-              {showPlayback ? (
+        <div className={`flex items-center rounded-3xl border border-white/10 bg-[#0f1218]/90 text-white shadow-2xl backdrop-blur-xl transition-[width,padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${isRecording || isProcessing ? 'w-full max-w-[640px] gap-3 px-4 py-3' : 'w-auto gap-4 px-4 py-3'}`}>
+          {showPlayback ? (
                 <>
                   <button
                     onClick={handleStartRecording}
@@ -603,15 +597,14 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                                 (!isRecording && isRecordingDisabled) ||
                                 (isRecording && (isStopping || isPausing || isResuming))
                               }
-                              className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white transition-colors ${
-                                isStarting || isValidatingModel ? 'bg-gray-400' : 'bg-red-500 hover:bg-red-600'
-                              }`}
+                              data-loading={isStarting || isValidatingModel || isProcessing ? 'true' : undefined}
+                              className="af-record-button relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white transition-[background] duration-200"
                             >
-                              {isRecording && !isPaused && !isStopping && (
-                                <span className="pointer-events-none absolute -inset-1 animate-pulse rounded-full border border-red-400/50" />
+                              {isRecording && !isPaused && !isStopping && !isProcessing && (
+                                <span className="pointer-events-none absolute -inset-1 animate-pulse rounded-full border border-[color-mix(in_srgb,var(--af-record)_55%,white)]" />
                               )}
-                              {isStarting || isValidatingModel ? (
-                                <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-white" />
+                              {isStarting || isValidatingModel || isProcessing ? (
+                                <Spinner size={20} className="text-white" />
                               ) : (
                                 <span className="relative flex h-5 w-5 items-center justify-center">
                                   <Mic
@@ -625,11 +618,6 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                                   />
                                 </span>
                               )}
-                              {(isStarting || isValidatingModel) && (
-                                <div className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-[var(--af-panel-2,#1f2937)] px-3 py-1 text-xs font-medium text-[var(--af-text,#e5e7eb)] shadow-lg">
-                                  {startupMessage || 'Starting…'}
-                                </div>
-                              )}
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>
@@ -641,10 +629,18 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                           <div className="text-sm font-semibold tabular-nums tracking-tight text-white">
                             {isRecording
                               ? formatElapsed(elapsedSeconds)
-                              : isStarting || isValidatingModel ? 'Starting…' : 'Start Recording'}
+                              : isProcessing
+                                ? 'Processing recording'
+                                : isStarting || isValidatingModel
+                                  ? 'Starting…'
+                                  : 'Start Recording'}
                           </div>
                           <div className={`text-[11px] transition-colors duration-300 ${isPaused ? 'text-orange-400' : 'text-red-400'}`}>
-                            {isRecording ? (isStopping ? 'Stopping…' : isPaused ? 'Paused' : 'Recording') : 'Ready'}
+                            {isRecording
+                              ? (isStopping ? 'Stopping…' : isPaused ? 'Paused' : 'Recording')
+                              : isProcessing || isStarting || isValidatingModel
+                                ? (startupMessage || 'Please wait')
+                                : 'Ready'}
                           </div>
                         </div>
 
@@ -745,16 +741,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
 
                 </>
               )}
-            </>
-          )}
         </div>
-
-        {/* Show validation status only */}
-        {isValidatingModel && (
-          <div className="text-xs text-gray-600 text-center mt-2">
-            Validating speech recognition...
-          </div>
-        )}
 
         {/* Device error alert */}
         {deviceError && (

@@ -1,6 +1,7 @@
 import React from 'react';
 import { ModelStatus } from '../lib/whisper';
 import { Button } from './ui/button';
+import { Spinner } from './ui/spinner';
 
 interface ModelDownloadProgressProps {
   status: ModelStatus;
@@ -20,7 +21,7 @@ export function ModelDownloadProgress({ status, modelName, onCancel }: ModelDown
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center space-x-2">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+          <Spinner className="h-4 w-4 text-[var(--af-accent)]" />
           <span className="text-sm font-medium text-blue-900">
             {isCompleted ? 'Finalizing...' : `Downloading ${modelName}`}
           </span>

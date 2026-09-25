@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Spinner } from '@/components/ui/spinner';
 import { invoke } from '@tauri-apps/api/core';
-import { BookOpen, Check, CheckCircle2, ChevronDown, Clock3, Languages, Loader2, Radio, Zap } from 'lucide-react';
+import { BookOpen, Check, CheckCircle2, ChevronDown, Clock3, Languages,  Radio, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { Textarea } from './ui/textarea';
 import { Button } from './ui/button';
@@ -566,7 +567,7 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
                         )}
                     </div>
                     <Button type="button" size="sm" onClick={saveVocabulary} disabled={isSavingVocabulary || !whisperIsActive}>
-                        {isSavingVocabulary && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {isSavingVocabulary && <Spinner className="mr-2 h-4 w-4 " />}
                         Save vocabulary
                     </Button>
                 </div>

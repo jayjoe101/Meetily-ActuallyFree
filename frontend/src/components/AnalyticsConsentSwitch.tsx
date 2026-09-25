@@ -1,7 +1,8 @@
 import React, { useContext, useState, useEffect } from 'react';
+import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { Info, Loader2, Copy, Check } from 'lucide-react';
+import { Info,  Copy, Check } from 'lucide-react';
 import { AnalyticsContext } from './AnalyticsProvider';
 import { load } from '@tauri-apps/plugin-store';
 import { invoke } from '@tauri-apps/api/core';
@@ -173,7 +174,7 @@ export default function AnalyticsConsentSwitch() {
           </div>
           <div className="flex items-center gap-2 ml-4">
             {isProcessing && (
-              <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+              <Spinner className="w-4 h-4 text-gray-500" />
             )}
             <Switch
               checked={isAnalyticsOptedIn}

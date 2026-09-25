@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { RefreshCw, Globe, Loader2, AlertCircle, CheckCircle2, X, Cpu, BookOpen } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+import { RefreshCw, Globe,  AlertCircle, CheckCircle2, X, Cpu, BookOpen } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -349,7 +350,7 @@ export function RetranscribeDialog({
           <DialogTitle className="flex items-center gap-2">
             {isProcessing ? (
               <>
-                <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                <Spinner className="h-5 w-5 text-blue-600" />
                 Retranscribing...
               </>
             ) : error ? (

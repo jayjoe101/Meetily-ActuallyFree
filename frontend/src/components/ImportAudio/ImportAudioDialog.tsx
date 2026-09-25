@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Spinner } from '@/components/ui/spinner';
 import {
   Upload,
-  Globe,
-  Loader2,
+  Globe, 
   AlertCircle,
   CheckCircle2,
   X,
@@ -235,7 +235,7 @@ export function ImportAudioDialog({
           <DialogTitle className="flex items-center gap-2">
             {isProcessing ? (
               <>
-                <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                <Spinner className="h-5 w-5 text-blue-600" />
                 Importing Audio...
               </>
             ) : error ? (
@@ -311,7 +311,7 @@ export function ImportAudioDialog({
                   <Button onClick={handleSelectFile} disabled={status === 'validating'}>
                     {status === 'validating' ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Spinner className="h-4 w-4 mr-2 " />
                         Validating...
                       </>
                     ) : (

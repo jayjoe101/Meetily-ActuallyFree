@@ -1,4 +1,5 @@
 "use client";
+import { Spinner } from '@/components/ui/spinner';
 
 import { ModelConfig, ModelSettingsModal } from '@/components/ModelSettingsModal';
 import {
@@ -16,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Sparkles, Settings, Loader2, FileText, Check, Square } from 'lucide-react';
+import { Sparkles, Settings,  FileText, Check, Square } from 'lucide-react';
 import Analytics from '@/lib/analytics';
 import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
@@ -281,7 +282,7 @@ export function SummaryGeneratorButtonGroup({
         >
           {isCheckingModels || isModelConfigLoading ? (
             <>
-              <Loader2 className="animate-spin xl:mr-2" size={18} />
+              <Spinner className=" xl:mr-2" size={18} />
               <span className="summary-action-label summary-primary-label">Processing...</span>
             </>
           ) : (

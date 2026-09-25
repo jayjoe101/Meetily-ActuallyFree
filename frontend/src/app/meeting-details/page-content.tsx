@@ -229,9 +229,9 @@ export default function PageContent({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={isPostCallRecording ? false : { opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
+      transition={{ duration: isPostCallRecording ? 0 : 0.3, ease: 'easeOut' }}
       className="flex flex-col h-screen bg-[var(--af-bg)]"
     >
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--af-bg)] md:flex-row">

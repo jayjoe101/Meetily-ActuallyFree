@@ -1,9 +1,10 @@
 "use client";
+import { Spinner } from '@/components/ui/spinner';
 
 import { useState, useCallback, useEffect } from 'react';
 import { ToolbarButton as Button } from './ToolbarButton';
 import { ButtonGroup } from '@/components/ui/button-group';
-import { Copy, Download, FolderOpen, RefreshCw, Users, Loader2 } from 'lucide-react';
+import { Copy, Download, FolderOpen, RefreshCw, Users} from 'lucide-react';
 import Analytics from '@/lib/analytics';
 import { RetranscribeDialog } from './RetranscribeDialog';
 import { useConfig } from '@/contexts/ConfigContext';
@@ -170,7 +171,7 @@ export function TranscriptButtonGroup({
             }
           >
             {isDiarizing ? (
-              <Loader2 className="animate-spin" size={16} />
+              <Spinner className="" size={16} />
             ) : (
               <Users size={16} />
             )}

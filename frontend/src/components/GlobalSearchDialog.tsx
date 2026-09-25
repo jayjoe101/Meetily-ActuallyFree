@@ -14,7 +14,6 @@ import {
   CalendarDays,
   Clock3,
   FileText,
-  Loader2,
   MessageSquareText,
   Search,
   UserRound,
@@ -29,6 +28,7 @@ import {
   CommandSeparator,
 } from '@/components/ui/command';
 import type { GlobalSearchResult } from '@/types';
+import { Spinner } from '@/components/ui/spinner';
 
 function formatAudioTime(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds));
@@ -238,7 +238,7 @@ export default function GlobalSearchDialog() {
           </div>
         ) : loading ? (
           <div className="flex min-h-56 flex-col items-center justify-center gap-3 text-sm text-[var(--af-text-2)]">
-            <Loader2 className="h-5 w-5 animate-spin text-[var(--af-accent)]" />
+            <Spinner className="h-5 w-5 text-[var(--af-accent)]" />
             Searching your meeting library...
           </div>
         ) : error ? (

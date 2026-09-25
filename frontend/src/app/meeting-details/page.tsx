@@ -6,7 +6,8 @@ import PageContent from "./page-content";
 import { useRouter, useSearchParams } from "next/navigation";
 import Analytics from "@/lib/analytics";
 import { invoke } from "@tauri-apps/api/core";
-import { LoaderIcon } from "lucide-react";
+import { PostCallHandoffCard } from "@/components/PostCallHandoffCard";
+import { Spinner } from "@/components/ui/spinner";
 import { useConfig } from "@/contexts/ConfigContext";
 import { usePaginatedTranscripts } from "@/hooks/usePaginatedTranscripts";
 import { shouldSetUpAutoSummary } from "@/lib/meeting-summary-policy";
@@ -24,7 +25,7 @@ function MeetingDetailsContent() {
   const searchParams = useSearchParams();
   const meetingId = searchParams.get('id');
   const source = searchParams.get('source'); // Check if navigated from recording
-  const { setCurrentMeeting, refetchMeetings, stopSummaryPolling } = useSidebar();
+  const { setCurrentMeeting, refetchMeetings, stopSummaryPolling, isCollapsed: sidebarCollapsed } = useSidebar();
   const { isAutoSummary, setModelConfig } = useConfig(); // Get auto-summary toggle state
   const router = useRouter();
   const [meetingDetails, setMeetingDetails] = useState<MeetingDetailsResponse | null>(null);
@@ -386,9 +387,22 @@ function MeetingDetailsContent() {
   // flipping isLoadingTranscripts used to unmount it and wipe in-flight summary
   // state (status + just-generated aiSummary).
   if (!meetingDetails) {
-    return <div className="flex items-center justify-center h-screen">
-      <LoaderIcon className="animate-spin size-6 " />
-    </div>;
+    return (
+      <div className="h-screen bg-[var(--af-bg)]">
+        {source === 'recording' ? (
+          <PostCallHandoffCard
+            sidebarCollapsed={sidebarCollapsed}
+            busy
+            title="Opening your meeting"
+            detail="Getting the transcript ready."
+          />
+        ) : (
+          <div className="flex h-screen items-center justify-center">
+            <Spinner className="h-6 w-6 text-[var(--af-text-2)]" />
+          </div>
+        )}
+      </div>
+    );
   }
 
   return <PageContent
@@ -416,7 +430,7 @@ export default function MeetingDetails() {
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center h-screen">
-        <LoaderIcon className="animate-spin size-6" />
+        <Spinner className="h-6 w-6 text-[var(--af-text-2)]" />
       </div>
     }>
       <MeetingDetailsContent />

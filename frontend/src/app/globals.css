@@ -537,6 +537,8 @@ html.minibar-window body,
 html.dark.minibar-window,
 html.dark.minibar-window body {
   background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
   overflow: hidden;
 }
 

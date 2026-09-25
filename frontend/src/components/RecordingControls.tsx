@@ -185,7 +185,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
   const [speechDetected, setSpeechDetected] = useState(false);
   const [deviceError, setDeviceError] = useState<{ title: string, message: string } | null>(null);
   // Coach-mark above the minimize button after recording starts.
-  const [showCompactTip, setShowCompactTip] = useState(false);
+
 
   const currentTime = 0;
   const duration = 0;
@@ -206,20 +206,6 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
     const s = Math.floor(totalSeconds % 60);
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
-
-  // Tip above the minimize control when recording starts.
-  useEffect(() => {
-    const onTip = () => {
-      setShowCompactTip(true);
-      window.setTimeout(() => setShowCompactTip(false), 12000);
-    };
-    window.addEventListener('show-compact-mode-tip', onTip);
-    return () => window.removeEventListener('show-compact-mode-tip', onTip);
-  }, []);
-
-  useEffect(() => {
-    if (!isRecording) setShowCompactTip(false);
-  }, [isRecording]);
 
   useEffect(() => {
     const checkTauri = async () => {
@@ -662,41 +648,6 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                           </div>
                         </div>
 
-                        <div className="relative">
-                        {showCompactTip && isRecording && (
-                          <div
-                            role="dialog"
-                            aria-label="Shrink to floating bar"
-                            className="absolute bottom-[calc(100%+12px)] right-0 z-50 w-[260px] rounded-xl border border-white/10 bg-[var(--af-panel,#0f1218)] px-3.5 py-3 text-left shadow-2xl shadow-black/50"
-                          >
-                            <span
-                              aria-hidden
-                              className="absolute -bottom-1.5 right-3 h-3 w-3 rotate-45 border-b border-r border-white/10 bg-[var(--af-panel,#0f1218)]"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowCompactTip(false)}
-                              className="absolute right-2 top-2 rounded p-0.5 text-[var(--af-text-3)] hover:text-[var(--af-text)]"
-                              aria-label="Dismiss"
-                            >
-                              <X size={14} />
-                            </button>
-                            <div className="pr-5 text-sm font-semibold text-[var(--af-text)]">You’re recording</div>
-                            <p className="mt-1 text-xs leading-relaxed text-[var(--af-text-2)]">
-                              Tuck Meetily into a compact floating bar so it stays out of your way — expand it again anytime.
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setShowCompactTip(false);
-                                collapseToBar();
-                              }}
-                              className="mt-3 w-full rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-900 transition-colors hover:bg-gray-100"
-                            >
-                              Shrink to bar
-                            </button>
-                          </div>
-                        )}
                         <div
                           className={`grid overflow-hidden transition-[grid-template-columns,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
                             isRecording ? 'grid-cols-[1fr] opacity-100' : 'pointer-events-none grid-cols-[0fr] opacity-0'
@@ -727,33 +678,23 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                                 <p>{isPaused ? 'Resume recording' : 'Pause recording'}</p>
                               </TooltipContent>
                             </Tooltip>
-                            <div className="relative shrink-0">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setShowCompactTip(false);
-                                      collapseToBar();
-                                    }}
-                                    disabled={isStopping}
-                                    aria-label="Shrink to floating bar"
-                                    className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors disabled:opacity-40 ${
-                                      showCompactTip
-                                        ? 'bg-[var(--af-accent)]/15 text-white ring-1 ring-[var(--af-accent)]/40'
-                                        : 'bg-white/[0.06] text-white/80 hover:bg-white/[0.12] hover:text-white'
-                                    }`}
-                                  >
-                                    <Minimize2 size={14} />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top" sideOffset={8}>
-                                  <p>Shrink to floating bar</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </div>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  onClick={collapseToBar}
+                                  disabled={isStopping}
+                                  aria-label="Shrink to floating bar"
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-40"
+                                >
+                                  <Minimize2 size={14} />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" sideOffset={8}>
+                                <p>Shrink to floating bar</p>
+                              </TooltipContent>
+                            </Tooltip>
                           </div>
-                        </div>
                         </div>
                       </div>
 

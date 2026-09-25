@@ -5,7 +5,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { Check, ChevronDown, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { LiveAudioVisualizer } from '@/components/LiveAudioVisualizer';
 import {
   deviceDisplayName,
@@ -152,17 +152,22 @@ export function RecordingVoiceLane({
     <Popover open={open && !live} onOpenChange={(next) => { if (!disabled && !live) onOpenChange(next); }}>
       <Tooltip open={open && !live ? false : undefined}>
         <TooltipTrigger asChild>
-          <PopoverAnchor asChild>
+          <PopoverTrigger asChild>
             <button
               type="button"
               disabled={disabled}
               aria-expanded={live ? undefined : open}
               aria-pressed={live ? muted : undefined}
               aria-label={live ? muteLabel : settingsLabel}
-              onClick={() => {
-                if (disabled) return;
-                if (live) onMute?.();
-                else onOpenChange(!open);
+              onClick={(event) => {
+                if (disabled) {
+                  event.preventDefault();
+                  return;
+                }
+                if (live) {
+                  event.preventDefault();
+                  onMute?.();
+                }
               }}
               className={`flex h-9 items-center rounded-full pl-2.5 transition-[background-color,padding,color,width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] disabled:opacity-50 ${
                 live ? 'w-full min-w-[9rem] pr-2.5' : 'pr-1.5'
@@ -203,7 +208,7 @@ export function RecordingVoiceLane({
                 </span>
               </span>
             </button>
-          </PopoverAnchor>
+          </PopoverTrigger>
         </TooltipTrigger>
         <TooltipContent side="top" sideOffset={8} className="max-w-[220px]">
           <p className="font-medium">{live ? muteLabel : settingsLabel}</p>

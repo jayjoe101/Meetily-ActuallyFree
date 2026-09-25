@@ -1,0 +1,4 @@
+[env]
+# whisper-rs bindgen needs this clang. Without it the generated whisper
+# headers are empty and the app does not compile.
+LIBCLANG_PATH = { value = ".build-tools/clang+llvm-18.1.8-x86_64-pc-windows-msvc/bin", relative = true }

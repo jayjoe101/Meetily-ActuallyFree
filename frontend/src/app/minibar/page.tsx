@@ -16,7 +16,6 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Mic, MicOff, Volume2, VolumeX, Pause, Play, Square, Maximize2 } from 'lucide-react';
 import { LiveAudioVisualizer } from '@/components/LiveAudioVisualizer';
 import { recordingService } from '@/services/recordingService';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 function formatElapsed(totalSeconds: number): string {
   const h = Math.floor(totalSeconds / 3600);
@@ -158,7 +157,6 @@ export default function MiniBarPage() {
   const busy = isStopping || isChangingMicMute || isChangingSystemMute;
 
   return (
-    <TooltipProvider>
       <div
         onMouseDown={(event) => {
           if (event.button !== 0 || (event.target as Element).closest('button')) return;
@@ -167,68 +165,47 @@ export default function MiniBarPage() {
             console.error('Compact bar: dragging failed', error);
           });
         }}
-        className="flex h-screen w-screen items-center gap-3 rounded-full border border-white/10 bg-[#0f1218]/55 px-3 text-white shadow-2xl backdrop-blur-xl select-none"
+        className="flex h-screen w-screen items-center gap-3 rounded-3xl border border-white/10 bg-[#0f1218]/70 px-4 text-white select-none"
       >
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={() => { void stop(); }}
-              disabled={busy}
-              aria-label="Stop recording"
-              className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-500 text-white transition-colors hover:bg-red-600 disabled:opacity-40"
-            >
-              {!isPaused && !isStopping && (
-                <span className="pointer-events-none absolute -inset-1 animate-pulse rounded-full border border-red-400/50" />
-              )}
-              <Square size={13} fill="currentColor" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={8}>
-            <p>Stop recording</p>
-          </TooltipContent>
-        </Tooltip>
+        <button
+          type="button"
+          onClick={() => { void stop(); }}
+          disabled={busy}
+          aria-label="Stop recording"
+          className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-500 text-white transition-colors hover:bg-red-600 disabled:opacity-40"
+        >
+          {!isPaused && !isStopping && (
+            <span className="pointer-events-none absolute -inset-1 animate-pulse rounded-full border border-red-400/50" />
+          )}
+          <Square size={13} fill="currentColor" />
+        </button>
 
-        <div className="min-w-[5.5rem] shrink-0 leading-tight">
+        <div className="min-w-[7.75rem] shrink-0 text-left leading-tight">
           <div className="text-sm font-semibold tabular-nums tracking-tight">{formatElapsed(elapsed)}</div>
           <div className={`text-[11px] ${isStopping ? 'text-gray-400' : isPaused ? 'text-orange-400' : 'text-red-400'}`}>
             {isStopping ? 'Finishing…' : isPaused ? 'Paused' : 'Recording'}
           </div>
         </div>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={() => { void togglePause(); }}
-              disabled={busy}
-              aria-label={isPaused ? 'Resume recording' : 'Pause recording'}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-40"
-            >
-              {isPaused ? <Play size={14} /> : <Pause size={14} />}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={8}>
-            <p>{isPaused ? 'Resume recording' : 'Pause recording'}</p>
-          </TooltipContent>
-        </Tooltip>
+        <button
+          type="button"
+          onClick={() => { void togglePause(); }}
+          disabled={busy}
+          aria-label={isPaused ? 'Resume recording' : 'Pause recording'}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-40"
+        >
+          {isPaused ? <Play size={14} /> : <Pause size={14} />}
+        </button>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={expand}
-              disabled={busy}
-              aria-label="Back to the full window"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-40"
-            >
-              <Maximize2 size={14} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={8}>
-            <p>Back to the full window</p>
-          </TooltipContent>
-        </Tooltip>
+        <button
+          type="button"
+          onClick={expand}
+          disabled={busy}
+          aria-label="Back to the full window"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-40"
+        >
+          <Maximize2 size={14} />
+        </button>
 
         <div className="h-8 w-px shrink-0 bg-white/10" />
 
@@ -272,6 +249,5 @@ export default function MiniBarPage() {
           />
         </button>
       </div>
-    </TooltipProvider>
   );
 }

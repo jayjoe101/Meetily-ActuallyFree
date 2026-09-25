@@ -18,6 +18,7 @@ import {
   MessageSquareText,
   Search,
   UserRound,
+  X,
 } from 'lucide-react';
 import {
   CommandDialog,
@@ -198,17 +199,29 @@ export default function GlobalSearchDialog() {
       onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : close())}
       title="Search people and meeting records"
       contentClassName="top-[44%] max-w-2xl gap-0 border-[var(--af-border-strong)] bg-[var(--af-panel)] shadow-2xl"
+      showCloseButton={false}
       commandProps={{
         shouldFilter: false,
         className: 'rounded-xl bg-[var(--af-panel)] text-[var(--af-text)]',
       }}
     >
-      <div className="border-b border-[var(--af-border)] p-2 [&_[cmdk-input-wrapper]]:rounded-lg [&_[cmdk-input-wrapper]]:border [&_[cmdk-input-wrapper]]:border-[var(--af-border)] [&_[cmdk-input-wrapper]]:bg-[var(--af-panel-2)] [&_[cmdk-input-wrapper]]:px-3 [&_[cmdk-input-wrapper]]:shadow-sm [&_[cmdk-input-wrapper]]:transition-shadow [&_[cmdk-input-wrapper]]:focus-within:border-[var(--af-accent)] [&_[cmdk-input-wrapper]]:focus-within:ring-2 [&_[cmdk-input-wrapper]]:focus-within:ring-[var(--af-accent)]/25 [&_[cmdk-input-wrapper]_svg]:text-[var(--af-accent)]">
+      <div className="border-b border-[var(--af-border)] px-3 py-3">
         <CommandInput
           value={query}
           onValueChange={setQuery}
           placeholder="Search people, meetings, transcripts, and summaries..."
-          className="h-12 pr-10 text-[15px] text-[var(--af-text)] placeholder:text-[var(--af-text-3)]"
+          wrapperClassName="h-11 rounded-lg border border-[var(--af-border-strong)] bg-[var(--af-panel-2)] pl-3 pr-1.5 focus-within:border-[var(--af-accent)] focus-within:ring-2 focus-within:ring-[var(--af-accent)]/20 [&>svg]:h-4 [&>svg]:w-4 [&>svg]:opacity-100 [&>svg]:text-[var(--af-text-3)] focus-within:[&>svg]:text-[var(--af-accent)]"
+          className="h-full text-sm text-[var(--af-text)] placeholder:text-[var(--af-text-3)]"
+          endAdornment={(
+            <button
+              type="button"
+              onClick={close}
+              aria-label="Close search"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--af-text-3)] transition-colors hover:bg-[var(--af-hover)] hover:text-[var(--af-text)]"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         />
       </div>
 

@@ -420,10 +420,14 @@ html.dark {
   box-shadow: 0 0 0 3px rgba(74, 139, 255, 0.12) !important;
 }
 
-/* Command inputs draw focus on their wrapper. Suppressing the nested input's
-   global ring avoids a second blue rectangle inside the control. */
+/* Command fields paint one surface on [cmdk-input-wrapper]. The blanket
+   `.dark input` rule would otherwise drop a second, smaller filled box
+   inside that outline, and the global focus ring would draw a second
+   rectangle on the nested input. */
+.dark [cmdk-input-wrapper] [cmdk-input],
 .dark [cmdk-input-wrapper] [cmdk-input]:focus,
 .dark [cmdk-input-wrapper] [cmdk-input]:focus-visible {
+  background-color: transparent !important;
   border-color: transparent !important;
   box-shadow: none !important;
   outline: none !important;

@@ -27,6 +27,7 @@ interface CommandDialogProps extends DialogProps {
   commandProps?: React.ComponentPropsWithoutRef<typeof CommandPrimitive>
   contentClassName?: string
   title?: string
+  showCloseButton?: boolean
 }
 
 const CommandDialog = ({
@@ -34,16 +35,20 @@ const CommandDialog = ({
   commandProps,
   contentClassName,
   title = "Command menu",
+  showCloseButton = true,
   ...props
 }: CommandDialogProps) => {
   return (
     <Dialog {...props}>
-      <DialogContent className={cn("overflow-hidden p-0", contentClassName)}>
+      <DialogContent
+        className={cn("overflow-hidden p-0", contentClassName)}
+        showCloseButton={showCloseButton}
+      >
         <DialogTitle className="sr-only">{title}</DialogTitle>
         <Command
           {...commandProps}
           className={cn(
-            "[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5",
+            "[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5",
             commandProps?.className
           )}
         >
@@ -54,20 +59,34 @@ const CommandDialog = ({
   )
 }
 
+interface CommandInputProps
+  extends React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input> {
+  /** Replaces the default bottom-border wrapper. The field surface belongs here. */
+  wrapperClassName?: string
+  endAdornment?: React.ReactNode
+}
+
 const CommandInput = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Input>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
->(({ className, ...props }, ref) => (
-  <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
-    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+  CommandInputProps
+>(({ className, wrapperClassName, endAdornment, ...props }, ref) => (
+  <div
+    className={cn(
+      "flex items-center gap-2",
+      wrapperClassName ?? "border-b px-3"
+    )}
+    cmdk-input-wrapper=""
+  >
+    <Search className="h-4 w-4 shrink-0 opacity-50" />
     <CommandPrimitive.Input
       ref={ref}
       className={cn(
-        "flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+        "af-bare flex h-10 min-w-0 flex-1 rounded-none bg-transparent py-0 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
       {...props}
     />
+    {endAdornment}
   </div>
 ))
 

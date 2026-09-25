@@ -10,7 +10,10 @@ module.exports = {
   	extend: {
   		fontFamily: {
   			sans: [
-  				'var(--font-source-sans-3)'
+  				'var(--font-sans)',
+  				'ui-sans-serif',
+  				'system-ui',
+  				'sans-serif',
   			]
   		},
   		colors: {

@@ -1,7 +1,7 @@
 'use client'
 
 import './globals.css'
-import { Source_Sans_3 } from 'next/font/google'
+import { Inter } from 'next/font/google'
 import Sidebar from '@/components/Sidebar'
 import { SidebarProvider } from '@/components/Sidebar/SidebarProvider'
 import MainContent from '@/components/MainContent'
@@ -9,6 +9,7 @@ import AnalyticsProvider from '@/components/AnalyticsProvider'
 import { Toaster, toast } from 'sonner'
 import "sonner/dist/styles.css"
 import { useState, useEffect, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
 import { listen, UnlistenFn } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { applyAppTheme, getSavedAppTheme } from '@/lib/app-theme'
@@ -32,10 +33,11 @@ import { getPendingCrashReport, type PendingCrashReport } from '@/services/crash
 import { Button } from '@/components/ui/button'
 
 
-const sourceSans3 = Source_Sans_3({
+const inter = Inter({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
-  variable: '--font-source-sans-3',
+  variable: '--font-sans',
+  display: 'swap',
 })
 
 // Module-level component — stable reference across RootLayout re-renders.
@@ -73,6 +75,8 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const pathname = usePathname()
+  const isMinibar = pathname.startsWith('/minibar')
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [onboardingCompleted, setOnboardingCompleted] = useState(false)
   const [startupResolved, setStartupResolved] = useState(false)
@@ -335,15 +339,12 @@ export default function RootLayout({
     window.location.reload()
   }
 
-  // The compact recording bar lives in its own tiny frameless window and must
-  // render bare: mounting the app chrome here put the collapsed sidebar (the
-  // logo square) and the floating Ask-AI button inside a 520×76 overlay, and
-  // their opaque backgrounds squared off the window's rounded corners.
-  // Checked via location rather than usePathname so no hook order changes.
-  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/minibar')) {
+  // The compact bar is its own window. Render it bare on the server and the
+  // client so the full app chrome never mounts there and then unmounts.
+  if (isMinibar) {
     return (
-      <html lang="en" className="dark minibar-window">
-        <body className={`${sourceSans3.variable} font-sans antialiased bg-transparent`}>
+      <html lang="en" className={`dark minibar-window ${inter.variable} ${inter.className}`}>
+        <body className="font-sans antialiased bg-transparent">
           {children}
         </body>
       </html>
@@ -351,8 +352,8 @@ export default function RootLayout({
   }
 
   return (
-    <html lang="en" className="dark">
-      <body className={`${sourceSans3.variable} font-sans antialiased`}>
+    <html lang="en" className={`dark ${inter.variable} ${inter.className}`}>
+      <body className="font-sans antialiased">
         {!startupResolved ? (
           <div className="h-screen bg-[var(--af-bg)]" />
         ) : startupError ? (

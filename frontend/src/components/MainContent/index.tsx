@@ -15,7 +15,7 @@ const MainContent: React.FC<MainContentProps> = ({ children }) => {
     // shrink below their content, which clipped Settings (and other pages)
     // when the window was narrower than sidebar + content.
     <main
-      className={`flex-1 min-w-0 min-h-0 h-screen overflow-hidden transition-all duration-300 ${
+      className={`flex-1 min-w-0 min-h-0 h-screen overflow-hidden transition-[margin-left] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
         isCollapsed ? 'ml-16' : 'ml-64'
       }`}
     >

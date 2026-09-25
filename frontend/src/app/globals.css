@@ -2,6 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+/* One typeface for the product. Inter is set on <html>; these rules keep
+   editors, toasts, and native controls from swapping in a second family. */
+button,
+input,
+textarea,
+select,
+option {
+  font-family: inherit;
+}
+
+.bn-container,
+.bn-container .bn-editor,
+.bn-container .ProseMirror,
+[data-sonner-toaster],
+[data-sonner-toast] {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif !important;
+}
+
 @keyframes vibrate {
   0% {
     transform: translate(0);

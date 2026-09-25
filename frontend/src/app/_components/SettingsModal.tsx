@@ -1,6 +1,8 @@
+import { invoke } from "@tauri-apps/api/core";
 import { ModelConfig } from "@/components/ModelSettingsModal";
 import { PreferenceSettings } from "@/components/PreferenceSettings";
-import { DeviceSelection } from "@/components/DeviceSelection";
+import { DeviceSelection, type SelectedDevices } from "@/components/DeviceSelection";
+import type { RecordingPreferences } from "@/components/RecordingSettings";
 import { LanguageSelection } from "@/components/LanguageSelection";
 import { TranscriptSettings } from "@/components/TranscriptSettings";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -183,7 +185,18 @@ export function SettingsModals({
 
           <DeviceSelection
             selectedDevices={selectedDevices}
-            onDeviceChange={setSelectedDevices}
+            onDeviceChange={(devices: SelectedDevices) => {
+              setSelectedDevices(devices);
+              void invoke<RecordingPreferences>('get_recording_preferences')
+                .then((prefs) => invoke('set_recording_preferences', {
+                  preferences: {
+                    ...prefs,
+                    preferred_mic_device: devices.micDevice,
+                    preferred_system_device: devices.systemDevice,
+                  },
+                }))
+                .catch((error) => console.error('Failed to save audio devices:', error));
+            }}
             disabled={isRecording}
           />
 

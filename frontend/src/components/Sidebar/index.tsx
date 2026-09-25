@@ -3,8 +3,8 @@
 /**
  * Primary left navigation sidebar.
  *
- * Layout (top → bottom): brand ("Meetily · Actually Free", see Logo.tsx),
- * a global-search trigger (Ctrl/Cmd+K), a teal "New Recording" action, a "RECENT MEETINGS"
+ * Layout (top → bottom): brand mark (see Logo.tsx), a global-search trigger
+ * (Ctrl/Cmd+K), a red "New Recording" action, a "RECENT MEETINGS"
  * list (dot + title + date-subtitle from `created_at`, with a "View all
  * library" toggle capped by RECENT_LIMIT), and a Settings-only footer.
  *
@@ -19,8 +19,8 @@
  *  - Default state is expanded (isCollapsed=false in SidebarProvider).
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { ChevronDown, ChevronRight, FileText, AudioLines, ArrowRight, Settings, ChevronLeftCircle, ChevronRightCircle, Calendar, Trash2, Mic, Square, Plus, Search, Pencil, NotebookPen, Upload } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { ChevronDown, ChevronRight, FileText, AudioLines, ArrowRight, Settings, ChevronLeftCircle, Calendar, Trash2, Mic, Square, Plus, Search, Pencil, NotebookPen, Upload } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSidebar } from './SidebarProvider';
 import type { CurrentMeeting } from '@/components/Sidebar/SidebarProvider';
@@ -90,6 +90,52 @@ function formatMeetingDate(d: Date): string {
 
 function formatMeetingTime(d: Date): string {
   return d.toLocaleString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
+// Shared by the collapsed rail and the wide sidebar. The icon slot is always
+// 40px, so a control grows to the right of its icon instead of being replaced.
+const RAIL_EASE = 'ease-[cubic-bezier(0.22,1,0.36,1)]';
+
+function RailIcon({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="flex h-full w-10 shrink-0 items-center justify-center">
+      {children}
+    </span>
+  );
+}
+
+function RailLabel({ expanded, children }: { expanded: boolean; children: React.ReactNode }) {
+  return (
+    <span
+      className={`grid min-w-0 flex-1 items-center transition-[grid-template-columns,opacity] motion-reduce:transition-none ${RAIL_EASE} ${
+        expanded
+          ? 'grid-cols-[1fr] opacity-100 delay-75 duration-200'
+          : 'grid-cols-[0fr] opacity-0 duration-150'
+      }`}
+    >
+      <span className="flex min-w-0 items-center overflow-hidden">{children}</span>
+    </span>
+  );
+}
+
+function RailTip({
+  show,
+  label,
+  children,
+}: {
+  show: boolean;
+  label: string;
+  children: React.ReactElement;
+}) {
+  if (!show) return children;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="right">
+        <p>{label}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 const Sidebar: React.FC = () => {
@@ -496,112 +542,6 @@ const Sidebar: React.FC = () => {
     };
   }, []);
 
-  const renderCollapsedIcons = () => {
-    if (!isCollapsed) return null;
-
-    const isMeetingPage = pathname?.includes('/meeting-details');
-    const isSettingsPage = pathname === '/settings';
-
-    return (
-      <TooltipProvider>
-        <div className="flex h-full flex-col items-center">
-          <div className="flex flex-col items-center space-y-4 mt-4">
-            <Logo isCollapsed={isCollapsed} />
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={openGlobalSearch}
-                  className="rounded-lg p-2 text-[var(--af-text-2)] transition-colors hover:bg-[var(--af-hover)] hover:text-[var(--af-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--af-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--af-bg)]"
-                  aria-label="Search everything"
-                >
-                  <Search className="h-5 w-5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>Search everything (Ctrl+K)</p>
-              </TooltipContent>
-            </Tooltip>
-
-            {/* New Recording */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={handleRecordingToggle}
-                  disabled={isRecording}
-                  className={`p-2 ${isRecording ? 'bg-red-500 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600'} rounded-full transition-colors duration-150 shadow-sm`}
-                >
-                  {isRecording ? (
-                    <Square className="w-5 h-5 text-white" />
-                  ) : (
-                    <Mic className="w-5 h-5 text-white" />
-                  )}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>{isRecording ? "Recording in progress..." : "Start Recording"}</p>
-              </TooltipContent>
-            </Tooltip>
-
-            {/* Meetings */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => {
-                    if (isCollapsed) toggleCollapse();
-                    toggleFolder('meetings');
-                  }}
-                  className={`p-2 rounded-lg transition-colors duration-150 ${isMeetingPage ? 'bg-gray-100' : 'hover:bg-gray-100'
-                    }`}
-                >
-                  <NotebookPen className="w-5 h-5 text-gray-600" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>Meetings</p>
-              </TooltipContent>
-            </Tooltip>
-
-            {/* Import Audio (below Meetings) */}
-            {betaFeatures.importAndRetranscribe && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => openImportDialog()}
-                    className="p-2 rounded-lg transition-colors duration-150 hover:bg-blue-100 bg-blue-50"
-                  >
-                    <Upload className="w-5 h-5 text-blue-600" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>Import Audio</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-
-          {/* Settings pinned to the bottom */}
-          <div className="mt-auto mb-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => router.push('/settings')}
-                  className={`p-2 rounded-lg transition-colors duration-150 ${isSettingsPage ? 'bg-gray-100' : 'hover:bg-gray-100'
-                    }`}
-                >
-                  <Settings className="w-5 h-5 text-gray-600" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>Settings</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        </div>
-      </TooltipProvider>
-    );
-  };
-
   const renderItem = (item: SidebarItem, depth = 0) => {
     const isExpanded = expandedFolders.has(item.id);
     // Keep meeting rows tight to the left so more of the title is visible.
@@ -609,8 +549,6 @@ const Sidebar: React.FC = () => {
     const isActive = item.type === 'file' && currentMeeting?.id === item.id;
     const isMeetingItem = item.id.includes('-') && !item.id.startsWith('intro-call');
     const isSelected = selectedIds.has(item.id);
-
-    if (isCollapsed) return null;
 
     return (
       <div key={item.id}>
@@ -728,150 +666,189 @@ const Sidebar: React.FC = () => {
     );
   };
 
+  const expanded = !isCollapsed;
+  const isMeetingPage = Boolean(pathname?.includes('/meeting-details'));
+  const isSettingsPage = pathname === '/settings';
+  const meetingsTitle = sidebarItems.find((item) => item.id === 'meetings')?.title ?? 'Recent Meetings';
+  const meetingListRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (meetingListRef.current) meetingListRef.current.inert = !expanded;
+  }, [expanded]);
+
+  const navButtonClass = (active: boolean) =>
+    `flex h-10 w-full items-center overflow-hidden rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--af-accent)] ${
+      active
+        ? 'bg-[var(--af-hover)] text-[var(--af-text)]'
+        : 'text-[var(--af-text-2)] hover:bg-[var(--af-hover)] hover:text-[var(--af-text)]'
+    }`;
+
   return (
-    <div className="fixed top-0 left-0 h-screen z-40">
-      {/* Floating collapse button */}
-      <button
-        onClick={toggleCollapse}
-        className="absolute -right-6 top-20 z-50 p-1 rounded-full shadow-lg border bg-[var(--af-panel,#fff)] border-[var(--af-border,#e5e7eb)] text-[var(--af-text,#374151)] hover:bg-[var(--af-hover,#f3f4f6)] transition-colors"
-        style={{ transform: 'translateX(50%)' }}
-      >
-        {isCollapsed ? (
-          <ChevronRightCircle className="w-6 h-6" />
-        ) : (
-          <ChevronLeftCircle className="w-6 h-6" />
-        )}
-      </button>
+    <div className="fixed top-0 left-0 z-40 h-screen">
+      <TooltipProvider>
+        <div className={`relative h-full transition-[width] duration-300 motion-reduce:transition-none ${RAIL_EASE} ${expanded ? 'w-64' : 'w-16'}`}>
+          <button
+            type="button"
+            onClick={toggleCollapse}
+            aria-label={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
+            aria-expanded={expanded}
+            className="absolute left-full top-20 z-50 ml-2 rounded-full border border-[var(--af-border)] bg-[var(--af-panel)] p-1 text-[var(--af-text)] shadow-lg transition-colors hover:bg-[var(--af-hover)]"
+          >
+            <ChevronLeftCircle className={`h-6 w-6 transition-transform duration-300 motion-reduce:transition-none ${RAIL_EASE} ${expanded ? '' : 'rotate-180'}`} />
+          </button>
 
-      <div
-        className={`h-screen bg-white border-r shadow-sm flex flex-col transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'
-          }`}
-      >
-        {/* Header: brand, search, New Recording */}
-        <div className="flex-shrink-0">
-          {!isCollapsed && (
-            <div className="px-3 pt-5 pb-4 space-y-4">
-              <div className="pt-1 pb-1">
-                <Logo isCollapsed={isCollapsed} />
-              </div>
+          <div className="flex h-full flex-col overflow-hidden border-r border-[var(--af-border)] bg-white shadow-sm">
+            <div className="flex shrink-0 flex-col gap-3 px-3 pt-4">
+              <Logo expanded={expanded} />
 
-              <button
-                onClick={openGlobalSearch}
-                className="flex h-9 w-full items-center gap-2 rounded-lg border border-[var(--af-border)] bg-[var(--af-panel)] px-3 text-left text-sm text-[var(--af-text-3)] shadow-sm hover:border-[var(--af-border-strong)] hover:bg-[var(--af-panel-2)] hover:text-[var(--af-text-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--af-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--af-bg)]"
-              >
-                <Search className="h-4 w-4 shrink-0" />
-                <span className="min-w-0 flex-1 truncate">Search everything</span>
-                <kbd className="shrink-0 rounded border border-[var(--af-border-strong)] bg-[var(--af-panel-2)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--af-text-3)]">Ctrl K</kbd>
-              </button>
+              <RailTip show={!expanded} label="Search everything (Ctrl+K)">
+                <button
+                  type="button"
+                  onClick={openGlobalSearch}
+                  aria-label="Search everything"
+                  className="flex h-10 w-full items-center overflow-hidden rounded-lg border border-[var(--af-border)] bg-[var(--af-panel)] text-[var(--af-text-3)] shadow-sm transition-colors hover:border-[var(--af-border-strong)] hover:bg-[var(--af-panel-2)] hover:text-[var(--af-text-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--af-accent)]"
+                >
+                  <RailIcon>
+                    <Search className="h-5 w-5" />
+                  </RailIcon>
+                  <RailLabel expanded={expanded}>
+                    <span className="min-w-0 flex-1 truncate pr-2 text-sm">Search everything</span>
+                    <kbd className="mr-2.5 shrink-0 rounded border border-[var(--af-border-strong)] bg-[var(--af-panel-2)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--af-text-3)]">
+                      Ctrl K
+                    </kbd>
+                  </RailLabel>
+                </button>
+              </RailTip>
 
-              <button
-                onClick={handleRecordingToggle}
-                disabled={isRecording}
-                className={`w-full flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-white transition-[filter] bg-[var(--af-accent)] ${isRecording ? 'opacity-70 cursor-not-allowed' : 'hover:brightness-110'}`}
-              >
-                {isRecording ? (
-                  <>
-                    <Square className="w-4 h-4" />
-                    <span>Recording in progress…</span>
-                  </>
-                ) : (
-                  <>
-                    <AudioLines className="w-4 h-4" />
-                    <span>New Recording</span>
-                  </>
-                )}
-              </button>
+              <RailTip show={!expanded} label={isRecording ? 'Recording in progress' : 'New Recording'}>
+                <button
+                  type="button"
+                  onClick={handleRecordingToggle}
+                  disabled={isRecording}
+                  aria-label={isRecording ? 'Recording in progress' : 'New Recording'}
+                  className={`flex h-10 w-full items-center overflow-hidden rounded-full bg-red-500 text-sm font-semibold text-white shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300 ${
+                    isRecording ? 'cursor-not-allowed opacity-80' : 'hover:bg-red-600'
+                  }`}
+                >
+                  <RailIcon>
+                    {isRecording ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                  </RailIcon>
+                  <RailLabel expanded={expanded}>
+                    <span className="truncate pr-3">{isRecording ? 'Recording…' : 'New Recording'}</span>
+                  </RailLabel>
+                </button>
+              </RailTip>
             </div>
-          )}
-        </div>
 
-        {/* Main content - scrollable area */}
-        <div className="flex-1 flex flex-col min-h-0">
-          {/* Content area */}
-          <div className="flex-1 flex flex-col min-h-0">
-            {renderCollapsedIcons()}
-            {/* Meetings folder header - fixed */}
-            {!isCollapsed && (
-              <div className="flex-shrink-0">
-                {sidebarItems.filter(item => item.type === 'folder').map(item => (
-                  <div
-                    key={item.id}
-                    className="flex items-center px-4 pt-5 pb-2 text-xs font-semibold uppercase tracking-wider text-[var(--af-text-3)]"
-                  >
-                    <span>{item.title}</span>
+            <div className="mt-2 flex min-h-0 flex-1 flex-col px-3">
+              <RailTip show={!expanded} label={meetingsTitle}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!expanded) toggleCollapse();
+                  }}
+                  aria-label={meetingsTitle}
+                  className={navButtonClass(isMeetingPage)}
+                >
+                  <RailIcon>
+                    <NotebookPen className="h-5 w-5" />
+                  </RailIcon>
+                  <RailLabel expanded={expanded}>
+                    <span className="truncate pr-2 text-xs font-semibold uppercase tracking-wider">
+                      {meetingsTitle}
+                    </span>
+                  </RailLabel>
+                </button>
+              </RailTip>
+
+              <div
+                ref={meetingListRef}
+                aria-hidden={!expanded}
+                className={`mt-1 flex min-h-0 flex-1 flex-col overflow-hidden transition-opacity motion-reduce:transition-none ${RAIL_EASE} ${
+                  expanded ? 'opacity-100 delay-100 duration-200' : 'pointer-events-none opacity-0 duration-100'
+                }`}
+              >
+                {selectedIds.size > 0 && (
+                  <div className="mb-1 flex items-center justify-between rounded-md bg-blue-50 px-3 py-2 text-sm">
+                    <span className="font-medium text-blue-700">{selectedIds.size} selected</span>
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={clearSelection} className="text-gray-500 hover:text-gray-700">Clear</button>
+                      <button
+                        type="button"
+                        onClick={() => setBulkDeleteOpen(true)}
+                        className="inline-flex items-center gap-1 rounded-md bg-red-500 px-2 py-1 font-medium text-white hover:bg-red-600"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Delete
+                      </button>
+                    </div>
                   </div>
-                ))}
-              </div>
-            )}
+                )}
 
-            {/* Bulk-selection action bar */}
-            {!isCollapsed && selectedIds.size > 0 && (
-              <div className="mx-3 mb-1 flex items-center justify-between rounded-md bg-blue-50 px-3 py-2 text-sm">
-                <span className="font-medium text-blue-700">{selectedIds.size} selected</span>
-                <div className="flex items-center gap-2">
-                  <button onClick={clearSelection} className="text-gray-500 hover:text-gray-700">Clear</button>
-                  <button
-                    onClick={() => setBulkDeleteOpen(true)}
-                    className="inline-flex items-center gap-1 rounded-md bg-red-500 px-2 py-1 font-medium text-white hover:bg-red-600"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> Delete
-                  </button>
+                <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto">
+                  {sidebarItems
+                    .filter(item => item.type === 'folder' && expandedFolders.has(item.id) && item.children)
+                    .map(item => {
+                      const children = item.children!;
+                      const showAll = showAllMeetings;
+                      const shown = showAll ? children : children.slice(0, RECENT_LIMIT);
+                      const hasMore = children.length > RECENT_LIMIT;
+                      return (
+                        <div key={`${item.id}-children`}>
+                          {shown.map(child => renderItem(child, 1))}
+                          {item.id === 'meetings' && hasMore && (
+                            <button
+                              type="button"
+                              onClick={() => setShowAllMeetings(v => !v)}
+                              className="mb-2 mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--af-border-strong)] px-3 py-2 text-sm font-medium text-[var(--af-text-2)] transition-colors hover:bg-[var(--af-hover)] hover:text-[var(--af-text)]"
+                            >
+                              {showAllMeetings ? 'Show recent only' : 'View all library'}
+                              <ArrowRight className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
-            )}
+            </div>
 
-            {/* Scrollable meeting items */}
-            {!isCollapsed && (
-              <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 px-1">
-                {sidebarItems
-                  .filter(item => item.type === 'folder' && expandedFolders.has(item.id) && item.children)
-                  .map(item => {
-                    const children = item.children!;
-                    const showAll = showAllMeetings;
-                    const shown = showAll ? children : children.slice(0, RECENT_LIMIT);
-                    const hasMore = children.length > RECENT_LIMIT;
-                    return (
-                      <div key={`${item.id}-children`} className="mx-1">
-                        {shown.map(child => renderItem(child, 1))}
-                        {item.id === 'meetings' && hasMore && (
-                          <button
-                            onClick={() => setShowAllMeetings(v => !v)}
-                            className="mt-3 mb-2 flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--af-border-strong)] px-3 py-2 text-sm font-medium text-[var(--af-text-2)] transition-colors hover:bg-[var(--af-hover)] hover:text-[var(--af-text)]"
-                          >
-                            {showAllMeetings ? 'Show recent only' : 'View all library'}
-                            <ArrowRight className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
+            <div className={`mx-3 mt-auto shrink-0 border-t pt-2 pb-3 transition-colors ${expanded ? 'border-[var(--af-border)]' : 'border-transparent'}`}>
+              {betaFeatures.importAndRetranscribe && (
+                <RailTip show={!expanded} label="Import Audio">
+                  <button
+                    type="button"
+                    onClick={() => openImportDialog()}
+                    aria-label="Import Audio"
+                    className={navButtonClass(false)}
+                  >
+                    <RailIcon>
+                      <Upload className="h-5 w-5" />
+                    </RailIcon>
+                    <RailLabel expanded={expanded}>
+                      <span className="truncate pr-2 text-sm font-medium">Import Audio</span>
+                    </RailLabel>
+                  </button>
+                </RailTip>
+              )}
+              <RailTip show={!expanded} label="Settings">
+                <button
+                  type="button"
+                  onClick={() => router.push('/settings')}
+                  aria-label="Settings"
+                  className={navButtonClass(isSettingsPage)}
+                >
+                  <RailIcon>
+                    <Settings className="h-5 w-5" />
+                  </RailIcon>
+                  <RailLabel expanded={expanded}>
+                    <span className="truncate pr-2 text-sm font-medium">Settings</span>
+                  </RailLabel>
+                </button>
+              </RailTip>
+            </div>
           </div>
         </div>
-
-        {/* Footer */}
-        {!isCollapsed && (
-          <div className="flex-shrink-0 p-2 border-t border-[var(--af-border)]">
-            {betaFeatures.importAndRetranscribe && (
-              <button
-                onClick={() => openImportDialog()}
-                className="w-full flex items-center gap-2.5 px-3 py-2 mb-1 text-sm font-medium text-[var(--af-text-2)] hover:bg-[var(--af-hover)] hover:text-[var(--af-text)] rounded-lg transition-colors"
-              >
-                <Upload className="w-4 h-4" />
-                <span>Import Audio</span>
-              </button>
-            )}
-            <button
-              onClick={() => router.push('/settings')}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-[var(--af-text-2)] hover:bg-[var(--af-hover)] hover:text-[var(--af-text)] rounded-lg transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              <span>Settings</span>
-            </button>
-          </div>
-        )}
-      </div>
+      </TooltipProvider>
 
       {/* Confirmation Modal for Delete */}
       <ConfirmationModal

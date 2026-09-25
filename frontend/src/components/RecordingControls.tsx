@@ -4,12 +4,10 @@
  * In-app recording widget shown on the main screen (app/page.tsx).
  *
  * Two visual states, both styled to mirror the floating compact bar (minibar):
- *  - Idle: red mic button + "Start Recording/Ready", a Mic row (selected device
- *    name) and a System row that shows green "Detected" / red "Not detected".
- *    Detection comes from usePermissionCheck (5s poll) — NOT from the audio
- *    stream, since the webview cannot see system audio (see CLAUDE.md).
- *  - Recording: status dot + timer, stacked Mic/System level meters
- *    (LiveAudioVisualizer with `fill`), and Pause / Stop / shrink controls.
+ *  - One card for idle and recording. The red button, the status text, and
+ *    the mic/output controls stay put: the button becomes stop, the label
+ *    becomes the timer, the chevrons become level meters, and pause/shrink
+ *    ease in beside the timer.
  *
  * Wiring:
  *  - Start/stop go through Tauri commands (invoke) and RecordingStateContext.
@@ -23,7 +21,7 @@
 
 import { invoke } from '@tauri-apps/api/core';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Play, Pause, Square, Mic, MicOff, Volume2, VolumeX, AlertCircle, X, Minimize2 } from 'lucide-react';
 import { LiveAudioVisualizer } from './LiveAudioVisualizer';
 import { ProcessRequest, SummaryResponse } from '@/types/summary';
@@ -32,7 +30,13 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import Analytics from '@/lib/analytics';
 import { useRecordingState } from '@/contexts/RecordingStateContext';
-import { usePermissionCheck } from '@/hooks/usePermissionCheck';
+import { useConfig } from '@/contexts/ConfigContext';
+import { usePlatform } from '@/hooks/usePlatform';
+import { toast } from 'sonner';
+import { UNAVAILABLE_DEVICE_VALUE, type AudioDeviceOption } from '@/lib/audio-devices';
+import type { RecordingPreferences } from '@/components/RecordingSettings';
+import type { SelectedDevices } from '@/components/DeviceSelection';
+import { RecordingVoiceLane } from '@/components/RecordingVoiceLane';
 
 interface RecordingControlsProps {
   isRecording: boolean;
@@ -74,23 +78,102 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
   // just being a dead button.
   const startupMessage = recordingState.statusMessage;
 
-  // For the idle bar: the selected mic name, and a live-ish system-audio check.
-  const { hasSystemAudio, checkPermissions } = usePermissionCheck();
-  const micName = selectedDevices?.micDevice?.trim() || 'Default microphone';
+  const { selectedDevices: savedDevices, setSelectedDevices } = useConfig();
+  const activeDevices = savedDevices ?? selectedDevices;
+  const isMacOS = usePlatform() === 'macos';
+  const [audioDevices, setAudioDevices] = useState<AudioDeviceOption[]>([]);
+  const [openLane, setOpenLane] = useState<'mic' | 'output' | null>(null);
+  const [micGain, setMicGain] = useState(1);
+  const [systemGain, setSystemGain] = useState(1);
+  const saveChain = useRef(Promise.resolve());
+
+  const inputDevices = audioDevices.filter((device) => device.device_type === 'Input');
+  const outputDevices = audioDevices.filter((device) => device.device_type === 'Output');
+
+  const loadAudioDevices = useCallback(async () => {
+    try {
+      const result = await invoke<AudioDeviceOption[]>('get_audio_devices');
+      setAudioDevices(result);
+    } catch (error) {
+      console.error('Failed to load audio devices for the recording card:', error);
+    }
+  }, []);
+
   useEffect(() => {
-    if (isRecording) return;
-    const id = setInterval(() => { checkPermissions(); }, 5000);
-    return () => clearInterval(id);
-    // checkPermissions is stable enough for a polling interval; re-subscribing
-    // on every render would defeat the interval.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRecording]);
+    void loadAudioDevices();
+    void invoke<RecordingPreferences>('get_recording_preferences')
+      .then((prefs) => {
+        setMicGain(prefs.mic_gain ?? 1);
+        setSystemGain(prefs.system_gain ?? 1);
+      })
+      .catch(() => undefined);
+  }, [loadAudioDevices]);
+
+
+
+  const saveDevices = useCallback((next: SelectedDevices) => {
+    setSelectedDevices(next);
+    saveChain.current = saveChain.current.then(async () => {
+      const prefs = await invoke<RecordingPreferences>('get_recording_preferences');
+      await invoke('set_recording_preferences', {
+        preferences: {
+          ...prefs,
+          preferred_mic_device: next.micDevice,
+          preferred_system_device: next.systemDevice,
+        },
+      });
+    }).catch((error) => {
+      console.error('Failed to save recording devices:', error);
+      toast.error('Could not save the audio device', {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    });
+  }, [setSelectedDevices]);
+
+  const saveGain = useCallback((which: 'mic' | 'system', value: number) => {
+    const next = Math.min(3, Math.max(0.5, value));
+    if (which === 'mic') setMicGain(next);
+    else setSystemGain(next);
+    saveChain.current = saveChain.current.then(async () => {
+      const prefs = await invoke<RecordingPreferences>('get_recording_preferences');
+      await invoke('set_recording_preferences', {
+        preferences: {
+          ...prefs,
+          mic_gain: which === 'mic' ? next : prefs.mic_gain,
+          system_gain: which === 'system' ? next : prefs.system_gain,
+        },
+      });
+    }).catch((error) => {
+      console.error('Failed to save audio sensitivity:', error);
+      toast.error('Could not save sensitivity');
+    });
+  }, []);
+
+  const chooseMic = (value: string) => {
+    if (value === UNAVAILABLE_DEVICE_VALUE) return;
+    saveDevices({
+      micDevice: value === 'default' ? null : value,
+      systemDevice: activeDevices?.systemDevice ?? null,
+    });
+  };
+
+  const chooseSystem = (value: string) => {
+    if (value === UNAVAILABLE_DEVICE_VALUE || isMacOS) return;
+    saveDevices({
+      micDevice: activeDevices?.micDevice ?? null,
+      systemDevice: value === 'default' ? null : value,
+    });
+  };
 
   const [showPlayback, setShowPlayback] = useState(false);
   const [recordingPath, setRecordingPath] = useState<string | null>(null);
   const [transcript, setTranscript] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+
+  useEffect(() => {
+    if (isRecording || isStarting) setOpenLane(null);
+  }, [isRecording, isStarting]);
   const [isStopping, setIsStopping] = useState(false);
   const [isPausing, setIsPausing] = useState(false);
   const [isResuming, setIsResuming] = useState(false);
@@ -470,7 +553,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
   return (
     <TooltipProvider>
       <div className="flex flex-col space-y-2">
-        <div className={`flex items-center rounded-3xl border border-white/10 bg-[#0f1218]/90 text-white shadow-2xl backdrop-blur-xl ${isRecording ? 'w-[640px] max-w-full gap-3 px-5 py-4' : 'w-[540px] max-w-full gap-4 px-5 py-4'}`}>
+        <div className={`flex items-center rounded-3xl border border-white/10 bg-[#0f1218]/90 text-white shadow-2xl backdrop-blur-xl transition-[width,padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${isRecording ? 'w-full max-w-[640px] gap-3 px-4 py-3' : 'w-auto gap-4 px-4 py-3'}`}>
           {isProcessing && !isParentProcessing ? (
             <div className="flex items-center space-x-2">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -515,29 +598,47 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                 </>
               ) : (
                 <>
-                  {!isRecording ? (
-                    // Idle bar — the "start" twin of the recording bar: red mic
-                    // button + a Start/Ready label where the timer sits, then the
-                    // idle Mic/System meters stretching to the right.
                     <div className="flex w-full items-center gap-4">
                       <div className="flex items-center gap-3 pl-0.5">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
                               onClick={() => {
+                                if (isRecording) {
+                                  Analytics.trackButtonClick('stop_recording', 'recording_controls');
+                                  handleStopRecording();
+                                  return;
+                                }
                                 Analytics.trackButtonClick('start_recording', 'recording_controls');
                                 handleStartRecording();
                               }}
-                              disabled={isStarting || isProcessing || isRecordingDisabled || isValidatingModel}
-                              className={`w-12 h-12 flex items-center justify-center shrink-0 ${isStarting || isProcessing || isValidatingModel ? 'bg-gray-400' : 'bg-red-500 hover:bg-red-600'
-                                } rounded-full text-white transition-colors relative`}
+                              disabled={
+                                isStarting || isProcessing || isValidatingModel ||
+                                (!isRecording && isRecordingDisabled) ||
+                                (isRecording && (isStopping || isPausing || isResuming))
+                              }
+                              className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white transition-colors ${
+                                isStarting || isValidatingModel ? 'bg-gray-400' : 'bg-red-500 hover:bg-red-600'
+                              }`}
                             >
-                              {isStarting || isValidatingModel ? (
-                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                              ) : (
-                                <Mic size={20} />
+                              {isRecording && !isPaused && !isStopping && (
+                                <span className="pointer-events-none absolute -inset-1 animate-pulse rounded-full border border-red-400/50" />
                               )}
-
+                              {isStarting || isValidatingModel ? (
+                                <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-white" />
+                              ) : (
+                                <span className="relative flex h-5 w-5 items-center justify-center">
+                                  <Mic
+                                    size={20}
+                                    className={`absolute transition-all duration-300 ${isRecording ? 'scale-75 opacity-0' : 'scale-100 opacity-100'}`}
+                                  />
+                                  <Square
+                                    size={13}
+                                    fill="currentColor"
+                                    className={`absolute transition-all duration-300 ${isRecording ? 'scale-100 opacity-100' : 'scale-75 opacity-0'}`}
+                                  />
+                                </span>
+                              )}
                               {(isStarting || isValidatingModel) && (
                                 <div className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-[var(--af-panel-2,#1f2937)] px-3 py-1 text-xs font-medium text-[var(--af-text,#e5e7eb)] shadow-lg">
                                   {startupMessage || 'Starting…'}
@@ -546,199 +647,160 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Start recording</p>
+                            <p>{isRecording ? 'Stop recording' : 'Start recording'}</p>
                           </TooltipContent>
                         </Tooltip>
 
-                        <button
-                          onClick={() => {
-                            if (isStarting || isProcessing || isRecordingDisabled || isValidatingModel) return;
-                            Analytics.trackButtonClick('start_recording', 'recording_controls');
-                            handleStartRecording();
-                          }}
-                          className="text-left leading-tight"
-                        >
-                          <div className="font-semibold tracking-tight text-white">
-                            {isStarting || isValidatingModel ? 'Starting…' : 'Start Recording'}
+                        <div className="min-w-[7.75rem] text-left leading-tight">
+                          <div className="text-sm font-semibold tabular-nums tracking-tight text-white">
+                            {isRecording
+                              ? formatElapsed(elapsedSeconds)
+                              : isStarting || isValidatingModel ? 'Starting…' : 'Start Recording'}
                           </div>
-                          <div className="text-[11px] text-red-400">Ready</div>
-                        </button>
-                      </div>
-
-                      <div className="h-10 w-px bg-white/10" />
-
-                      <div className="flex min-w-0 flex-1 flex-col gap-1.5 text-[12px]">
-                        <div className="flex min-w-0 items-center gap-2" title={`Microphone: ${micName}`}>
-                          <Mic size={13} className="shrink-0 text-gray-400" />
-                          <span className="truncate text-gray-300">{micName}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Volume2 size={13} className="shrink-0 text-gray-400" />
-                          <span className="text-gray-400">System audio</span>
-                          <span
-                            className={`ml-0.5 h-2 w-2 rounded-full ${hasSystemAudio ? 'bg-emerald-500' : 'bg-red-500'}`}
-                          />
-                          <span className={hasSystemAudio ? 'text-emerald-400' : 'text-red-400'}>
-                            {hasSystemAudio ? 'Detected' : 'Not detected'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    // Recording bar — mirrors the floating compact bar.
-                    <div className="flex w-full items-center gap-4">
-                      {/* Status + timer */}
-                      <div className="flex items-center gap-3 pl-1">
-                        <span className="relative flex h-6 w-6 items-center justify-center">
-                          <span className={`absolute inset-0 rounded-full ${isPaused ? 'bg-orange-500/20' : 'bg-red-500/20 animate-pulse'}`} />
-                          <span className={`h-3 w-3 rounded-full ${isPaused ? 'bg-orange-400' : 'bg-red-500'}`} />
-                        </span>
-                        <div className="text-left leading-tight">
-                          <div className="font-semibold tabular-nums tracking-tight">{formatElapsed(elapsedSeconds)}</div>
-                          <div className={`text-[11px] ${isPaused ? 'text-orange-400' : 'text-red-400'}`}>
-                            {isStopping ? 'Stopping…' : isPaused ? 'Paused' : 'Recording'}
+                          <div className={`text-[11px] transition-colors duration-300 ${isPaused ? 'text-orange-400' : 'text-red-400'}`}>
+                            {isRecording ? (isStopping ? 'Stopping…' : isPaused ? 'Paused' : 'Recording') : 'Ready'}
                           </div>
                         </div>
-                      </div>
-
-                      <div className="h-10 w-px bg-white/10" />
-
-                      {/* Live input levels (Rust-driven, per source) — stretch to
-                          fill the space between the timer and the controls. */}
-                      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-12 shrink-0 text-[11px] ${isMicrophoneMuted ? 'text-orange-400' : 'text-gray-400'}`}>
-                            Mic
-                          </span>
-                          <LiveAudioVisualizer active={isRecording && !isPaused && !isMicrophoneMuted} source="mic" fill bars={28} className="flex-1" />
-                          <button
-                            type="button"
-                            onClick={handleMicrophoneMute}
-                            disabled={isStopping || isChangingMicrophoneMute || isChangingSystemAudioMute}
-                            title={isMicrophoneMuted ? 'Unmute microphone' : 'Mute microphone'}
-                            aria-label={isMicrophoneMuted ? 'Unmute microphone' : 'Mute microphone'}
-                            aria-pressed={isMicrophoneMuted}
-                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors disabled:opacity-40 ${
-                              isMicrophoneMuted
-                                ? 'border-orange-500/40 bg-orange-500/15 text-orange-300 hover:bg-orange-500/25'
-                                : 'border-white/10 bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200'
-                            }`}
-                          >
-                            {isMicrophoneMuted ? <MicOff size={13} /> : <Mic size={13} />}
-                          </button>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`w-12 shrink-0 text-[11px] ${isSystemAudioMuted ? 'text-orange-400' : 'text-gray-400'}`}>
-                            System
-                          </span>
-                          <LiveAudioVisualizer active={isRecording && !isPaused && !isSystemAudioMuted} source="system" fill bars={28} className="flex-1" />
-                          <button
-                            type="button"
-                            onClick={handleSystemAudioMute}
-                            disabled={isStopping || isChangingMicrophoneMute || isChangingSystemAudioMute}
-                            title={isSystemAudioMuted ? 'Unmute system audio' : 'Mute system audio'}
-                            aria-label={isSystemAudioMuted ? 'Unmute system audio' : 'Mute system audio'}
-                            aria-pressed={isSystemAudioMuted}
-                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors disabled:opacity-40 ${
-                              isSystemAudioMuted
-                                ? 'border-orange-500/40 bg-orange-500/15 text-orange-300 hover:bg-orange-500/25'
-                                : 'border-white/10 bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200'
-                            }`}
-                          >
-                            {isSystemAudioMuted ? <VolumeX size={13} /> : <Volume2 size={13} />}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex shrink-0 items-center gap-2">
-                        <button
-                          onClick={() => {
-                            if (isPaused) {
-                              Analytics.trackButtonClick('resume_recording', 'recording_controls');
-                              handleResumeRecording();
-                            } else {
-                              Analytics.trackButtonClick('pause_recording', 'recording_controls');
-                              handlePauseRecording();
-                            }
-                          }}
-                          disabled={isPausing || isResuming || isStopping || isChangingMicrophoneMute || isChangingSystemAudioMute}
-                          title={isPaused ? 'Resume recording' : 'Pause recording'}
-                          className="flex h-12 w-14 flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-xs text-gray-300 transition-colors hover:bg-white/10 disabled:opacity-40"
-                        >
-                          {isPaused ? <Play size={15} /> : <Pause size={15} />}
-                          <span className="mt-0.5 text-[10px]">{isPaused ? 'Resume' : 'Pause'}</span>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            Analytics.trackButtonClick('stop_recording', 'recording_controls');
-                            handleStopRecording();
-                          }}
-                          disabled={isStopping || isPausing || isResuming || isChangingMicrophoneMute || isChangingSystemAudioMute}
-                          title="Stop recording"
-                          className="flex h-12 w-14 flex-col items-center justify-center rounded-2xl border border-red-500/30 bg-red-500/15 text-xs text-red-300 transition-colors hover:bg-red-500/25 disabled:opacity-40"
-                        >
-                          <Square size={13} fill="currentColor" />
-                          <span className="mt-0.5 text-[10px]">Stop</span>
-                        </button>
 
                         <div className="relative">
-                          {showCompactTip && (
-                            <div
-                              role="dialog"
-                              aria-label="Shrink to floating bar"
-                              className="absolute bottom-[calc(100%+12px)] right-0 z-50 w-[260px] rounded-xl border border-white/10 bg-[var(--af-panel,#0f1218)] px-3.5 py-3 text-left shadow-2xl shadow-black/50"
-                            >
-                              {/* Caret pointing at the minimize button */}
-                              <span
-                                aria-hidden
-                                className="absolute -bottom-1.5 right-4 h-3 w-3 rotate-45 border-b border-r border-white/10 bg-[var(--af-panel,#0f1218)]"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setShowCompactTip(false)}
-                                className="absolute right-2 top-2 rounded p-0.5 text-[var(--af-text-3)] hover:text-[var(--af-text)]"
-                                aria-label="Dismiss"
-                              >
-                                <X size={14} />
-                              </button>
-                              <div className="pr-5 text-sm font-semibold text-[var(--af-text)]">
-                                You’re recording
-                              </div>
-                              <p className="mt-1 text-xs leading-relaxed text-[var(--af-text-2)]">
-                                Tuck Meetily into a compact floating bar so it stays out of your way — expand it again anytime.
-                              </p>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setShowCompactTip(false);
-                                  collapseToBar();
-                                }}
-                                className="mt-3 w-full rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-900 transition-colors hover:bg-gray-100"
-                              >
-                                Shrink to bar
-                              </button>
-                            </div>
-                          )}
-                          <button
-                            onClick={() => {
-                              setShowCompactTip(false);
-                              collapseToBar();
-                            }}
-                            disabled={isStopping}
-                            title="Shrink to floating bar"
-                            className={`flex h-12 w-12 items-center justify-center rounded-2xl border text-gray-300 transition-colors disabled:opacity-40 ${
-                              showCompactTip
-                                ? 'border-[var(--af-accent)]/60 bg-[var(--af-accent)]/15 ring-2 ring-[var(--af-accent)]/30'
-                                : 'border-white/10 bg-white/5 hover:bg-white/10'
-                            }`}
+                        {showCompactTip && isRecording && (
+                          <div
+                            role="dialog"
+                            aria-label="Shrink to floating bar"
+                            className="absolute bottom-[calc(100%+12px)] right-0 z-50 w-[260px] rounded-xl border border-white/10 bg-[var(--af-panel,#0f1218)] px-3.5 py-3 text-left shadow-2xl shadow-black/50"
                           >
-                            <Minimize2 size={14} />
-                          </button>
+                            <span
+                              aria-hidden
+                              className="absolute -bottom-1.5 right-3 h-3 w-3 rotate-45 border-b border-r border-white/10 bg-[var(--af-panel,#0f1218)]"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowCompactTip(false)}
+                              className="absolute right-2 top-2 rounded p-0.5 text-[var(--af-text-3)] hover:text-[var(--af-text)]"
+                              aria-label="Dismiss"
+                            >
+                              <X size={14} />
+                            </button>
+                            <div className="pr-5 text-sm font-semibold text-[var(--af-text)]">You’re recording</div>
+                            <p className="mt-1 text-xs leading-relaxed text-[var(--af-text-2)]">
+                              Tuck Meetily into a compact floating bar so it stays out of your way — expand it again anytime.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowCompactTip(false);
+                                collapseToBar();
+                              }}
+                              className="mt-3 w-full rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-900 transition-colors hover:bg-gray-100"
+                            >
+                              Shrink to bar
+                            </button>
+                          </div>
+                        )}
+                        <div
+                          className={`grid overflow-hidden transition-[grid-template-columns,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+                            isRecording ? 'grid-cols-[1fr] opacity-100' : 'pointer-events-none grid-cols-[0fr] opacity-0'
+                          }`}
+                        >
+                          <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (isPaused) {
+                                      Analytics.trackButtonClick('resume_recording', 'recording_controls');
+                                      handleResumeRecording();
+                                    } else {
+                                      Analytics.trackButtonClick('pause_recording', 'recording_controls');
+                                      handlePauseRecording();
+                                    }
+                                  }}
+                                  disabled={isPausing || isResuming || isStopping}
+                                  aria-label={isPaused ? 'Resume recording' : 'Pause recording'}
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-40"
+                                >
+                                  {isPaused ? <Play size={14} /> : <Pause size={14} />}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" sideOffset={8}>
+                                <p>{isPaused ? 'Resume recording' : 'Pause recording'}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <div className="relative shrink-0">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setShowCompactTip(false);
+                                      collapseToBar();
+                                    }}
+                                    disabled={isStopping}
+                                    aria-label="Shrink to floating bar"
+                                    className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors disabled:opacity-40 ${
+                                      showCompactTip
+                                        ? 'bg-[var(--af-accent)]/15 text-white ring-1 ring-[var(--af-accent)]/40'
+                                        : 'bg-white/[0.06] text-white/80 hover:bg-white/[0.12] hover:text-white'
+                                    }`}
+                                  >
+                                    <Minimize2 size={14} />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" sideOffset={8}>
+                                  <p>Shrink to floating bar</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </div>
+                        </div>
                         </div>
                       </div>
+
+                      <div className="h-8 w-px shrink-0 self-center bg-white/10" />
+
+                      <div className={`flex items-center gap-2 ${isRecording ? 'min-w-0 flex-1' : 'shrink-0'}`}>
+                        <RecordingVoiceLane
+                          kind="mic"
+                          open={openLane === 'mic'}
+                          onOpenChange={(next) => {
+                            if (next) void loadAudioDevices();
+                            setOpenLane(next ? 'mic' : null);
+                          }}
+                          savedValue={activeDevices?.micDevice ?? null}
+                          options={inputDevices}
+                          onSelect={chooseMic}
+                          disabled={isStarting || isValidatingModel}
+                          gain={micGain}
+                          onGainLive={setMicGain}
+                          onGainCommit={(value) => saveGain('mic', value)}
+                          live={isRecording}
+                          muted={isMicrophoneMuted}
+                          meterActive={isRecording && !isPaused && !isMicrophoneMuted}
+                          onMute={() => { void handleMicrophoneMute(); }}
+                        />
+                        <RecordingVoiceLane
+                          kind="output"
+                          open={openLane === 'output'}
+                          onOpenChange={(next) => {
+                            if (next) void loadAudioDevices();
+                            setOpenLane(next ? 'output' : null);
+                          }}
+                          savedValue={isMacOS ? null : activeDevices?.systemDevice ?? null}
+                          options={isMacOS ? [] : outputDevices}
+                          onSelect={chooseSystem}
+                          disabled={isStarting || isValidatingModel}
+                          gain={systemGain}
+                          onGainLive={setSystemGain}
+                          onGainCommit={(value) => saveGain('system', value)}
+                          macDefaultOutput={isMacOS}
+                          live={isRecording}
+                          muted={isSystemAudioMuted}
+                          meterActive={isRecording && !isPaused && !isSystemAudioMuted}
+                          onMute={() => { void handleSystemAudioMute(); }}
+                        />
+                      </div>
                     </div>
-                  )}
 
                 </>
               )}

@@ -13,9 +13,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { Mic, MicOff, Monitor, VolumeX, Pause, Play, Square, Maximize2 } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX, Pause, Play, Square, Maximize2 } from 'lucide-react';
 import { LiveAudioVisualizer } from '@/components/LiveAudioVisualizer';
 import { recordingService } from '@/services/recordingService';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 function formatElapsed(totalSeconds: number): string {
   const h = Math.floor(totalSeconds / 3600);
@@ -154,121 +155,123 @@ export default function MiniBarPage() {
     }
   }, []);
 
+  const busy = isStopping || isChangingMicMute || isChangingSystemMute;
+
   return (
-    <div
-      onMouseDown={(event) => {
-        if (event.button !== 0 || (event.target as Element).closest('button')) return;
-        event.preventDefault();
-        void getCurrentWindow().startDragging().catch((error) => {
-          console.error('Compact bar: dragging failed', error);
-        });
-      }}
-      className="flex h-screen w-screen items-center gap-4 rounded-full border border-white/10 bg-[#0f1218]/60 px-6 text-white shadow-2xl backdrop-blur-xl select-none"
-    >
-      {/* Status + timer */}
-      <div className="flex items-center gap-3 pl-1">
-        <span className="relative flex h-6 w-6 items-center justify-center">
-          <span
-            className={`absolute inset-0 rounded-full ${
-              isStopping ? 'bg-gray-500/20' : isPaused ? 'bg-orange-500/20' : 'bg-red-500/20 animate-pulse'
-            }`}
-          />
-          <span
-            className={`h-3 w-3 rounded-full ${
-              isStopping ? 'bg-gray-400' : isPaused ? 'bg-orange-400' : 'bg-red-500'
-            }`}
-          />
-        </span>
-        <div className="leading-tight">
-          <div className="font-semibold tabular-nums tracking-tight">{formatElapsed(elapsed)}</div>
-          <div
-            className={`text-[11px] ${
-              isStopping ? 'text-gray-400' : isPaused ? 'text-orange-400' : 'text-red-400'
-            }`}
-          >
+    <TooltipProvider>
+      <div
+        onMouseDown={(event) => {
+          if (event.button !== 0 || (event.target as Element).closest('button')) return;
+          event.preventDefault();
+          void getCurrentWindow().startDragging().catch((error) => {
+            console.error('Compact bar: dragging failed', error);
+          });
+        }}
+        className="flex h-screen w-screen items-center gap-3 rounded-full border border-white/10 bg-[#0f1218]/55 px-3 text-white shadow-2xl backdrop-blur-xl select-none"
+      >
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => { void stop(); }}
+              disabled={busy}
+              aria-label="Stop recording"
+              className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-500 text-white transition-colors hover:bg-red-600 disabled:opacity-40"
+            >
+              {!isPaused && !isStopping && (
+                <span className="pointer-events-none absolute -inset-1 animate-pulse rounded-full border border-red-400/50" />
+              )}
+              <Square size={13} fill="currentColor" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={8}>
+            <p>Stop recording</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <div className="min-w-[5.5rem] shrink-0 leading-tight">
+          <div className="text-sm font-semibold tabular-nums tracking-tight">{formatElapsed(elapsed)}</div>
+          <div className={`text-[11px] ${isStopping ? 'text-gray-400' : isPaused ? 'text-orange-400' : 'text-red-400'}`}>
             {isStopping ? 'Finishing…' : isPaused ? 'Paused' : 'Recording'}
           </div>
         </div>
-      </div>
 
-      <div className="h-8 w-px bg-white/10" />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => { void togglePause(); }}
+              disabled={busy}
+              aria-label={isPaused ? 'Resume recording' : 'Pause recording'}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-40"
+            >
+              {isPaused ? <Play size={14} /> : <Pause size={14} />}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={8}>
+            <p>{isPaused ? 'Resume recording' : 'Pause recording'}</p>
+          </TooltipContent>
+        </Tooltip>
 
-      {/* Live input levels â€” same Rust events the main window listens to. */}
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-center gap-2">
-          <span className={`w-12 text-[11px] ${isMicMuted ? 'text-orange-400' : 'text-gray-400'}`}>
-            Mic
-          </span>
-          <LiveAudioVisualizer active={!isPaused && !isStopping && !isMicMuted} source="mic" bars={14} />
-          <button
-            type="button"
-            onClick={toggleMicMute}
-            disabled={isStopping || isChangingMicMute || isChangingSystemMute}
-            title={isMicMuted ? 'Unmute microphone' : 'Mute microphone'}
-            aria-label={isMicMuted ? 'Unmute microphone' : 'Mute microphone'}
-            aria-pressed={isMicMuted}
-            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors disabled:opacity-40 ${
-              isMicMuted
-                ? 'border-orange-500/40 bg-orange-500/15 text-orange-300 hover:bg-orange-500/25'
-                : 'border-white/10 bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200'
-            }`}
-          >
-            {isMicMuted ? <MicOff size={13} /> : <Mic size={13} />}
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className={`w-12 text-[11px] ${isSystemMuted ? 'text-orange-400' : 'text-gray-400'}`}>
-            System
-          </span>
-          <LiveAudioVisualizer active={!isPaused && !isStopping && !isSystemMuted} source="system" bars={14} />
-          <button
-            type="button"
-            onClick={toggleSystemMute}
-            disabled={isStopping || isChangingMicMute || isChangingSystemMute}
-            title={isSystemMuted ? 'Unmute system audio' : 'Mute system audio'}
-            aria-label={isSystemMuted ? 'Unmute system audio' : 'Mute system audio'}
-            aria-pressed={isSystemMuted}
-            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors disabled:opacity-40 ${
-              isSystemMuted
-                ? 'border-orange-500/40 bg-orange-500/15 text-orange-300 hover:bg-orange-500/25'
-                : 'border-white/10 bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200'
-            }`}
-          >
-            {isSystemMuted ? <VolumeX size={13} /> : <Monitor size={13} />}
-          </button>
-        </div>
-      </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={expand}
+              disabled={busy}
+              aria-label="Back to the full window"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white disabled:opacity-40"
+            >
+              <Maximize2 size={14} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={8}>
+            <p>Back to the full window</p>
+          </TooltipContent>
+        </Tooltip>
 
-      <div className="ml-auto flex items-center gap-2">
+        <div className="h-8 w-px shrink-0 bg-white/10" />
+
         <button
-          onClick={togglePause}
-          disabled={isStopping || isChangingMicMute || isChangingSystemMute}
-          title={isPaused ? 'Resume recording' : 'Pause recording'}
-          className="flex h-10 w-14 flex-col items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs text-gray-300 transition-colors hover:bg-white/10 disabled:opacity-40"
+          type="button"
+          onClick={() => { void toggleMicMute(); }}
+          disabled={busy}
+          aria-pressed={isMicMuted}
+          aria-label={isMicMuted ? 'Unmute microphone' : 'Mute microphone'}
+          className={`flex h-9 min-w-0 flex-1 items-center rounded-full pl-2.5 pr-2.5 transition-colors disabled:opacity-40 ${
+            isMicMuted ? 'bg-orange-500/15 text-orange-100 ring-1 ring-orange-400/40' : 'bg-white/[0.06] text-white/80 hover:bg-white/[0.12]'
+          }`}
         >
-          {isPaused ? <Play size={15} /> : <Pause size={15} />}
-          <span className="mt-0.5 text-[10px]">{isPaused ? 'Resume' : 'Pause'}</span>
+          {isMicMuted ? <MicOff size={15} /> : <Mic size={15} />}
+          <LiveAudioVisualizer
+            active={!isPaused && !isStopping && !isMicMuted}
+            source="mic"
+            bars={18}
+            fill
+            className="ml-1.5 min-w-0 flex-1"
+          />
         </button>
 
         <button
-          onClick={stop}
-          disabled={isStopping || isChangingMicMute || isChangingSystemMute}
-          title="Stop recording"
-          className="flex h-10 w-14 flex-col items-center justify-center rounded-full border border-red-500/30 bg-red-500/15 text-xs text-red-300 transition-colors hover:bg-red-500/25 disabled:opacity-40"
+          type="button"
+          onClick={() => { void toggleSystemMute(); }}
+          disabled={busy}
+          aria-pressed={isSystemMuted}
+          aria-label={isSystemMuted ? 'Unmute output' : 'Mute output'}
+          className={`flex h-9 min-w-0 flex-1 items-center rounded-full pl-2.5 pr-2.5 transition-colors disabled:opacity-40 ${
+            isSystemMuted ? 'bg-orange-500/15 text-orange-100 ring-1 ring-orange-400/40' : 'bg-white/[0.06] text-white/80 hover:bg-white/[0.12]'
+          }`}
         >
-          <Square size={13} fill="currentColor" />
-          <span className="mt-0.5 text-[10px]">Stop</span>
-        </button>
-
-        <button
-          onClick={expand}
-          disabled={isStopping || isChangingMicMute || isChangingSystemMute}
-          title="Back to the full window"
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-300 transition-colors hover:bg-white/10 disabled:opacity-40"
-        >
-          <Maximize2 size={14} />
+          {isSystemMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+          <LiveAudioVisualizer
+            active={!isPaused && !isStopping && !isSystemMuted}
+            source="system"
+            bars={18}
+            fill
+            className="ml-1.5 min-w-0 flex-1"
+          />
         </button>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }

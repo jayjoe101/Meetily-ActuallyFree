@@ -20,7 +20,7 @@ function StatusOverlay({ show, message, sidebarCollapsed }: StatusOverlayProps) 
   return (
     <div className="fixed bottom-4 left-0 right-0 z-10">
       <div
-        className="flex justify-center pl-8 transition-[margin] duration-300"
+        className="flex justify-center pl-8 transition-[margin] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
         style={{
           marginLeft: sidebarCollapsed ? '4rem' : '16rem'
         }}

@@ -225,12 +225,12 @@ export default function Home() {
           status !== RecordingStatus.SAVING && (
             <div className="fixed bottom-12 left-0 right-0 z-30 pointer-events-none">
               <div
-                className="flex justify-center pl-8 transition-[margin] duration-300 pointer-events-none"
+                className="flex justify-center pl-8 transition-[margin] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none pointer-events-none"
                 style={{
                   marginLeft: sidebarCollapsed ? '4rem' : '16rem'
                 }}
               >
-                <div className="w-2/3 max-w-[750px] flex justify-center pointer-events-auto">
+                <div className="flex w-full max-w-[680px] justify-center pointer-events-auto">
                   <div className="flex items-center">
                     <RecordingControls
                       isRecording={recordingState.isRecording}

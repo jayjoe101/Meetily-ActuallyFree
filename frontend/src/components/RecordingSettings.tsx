@@ -24,7 +24,7 @@ interface RecordingSettingsProps {
 }
 
 export function RecordingSettings({ onSave }: RecordingSettingsProps) {
-  const { updateRecordingsLocation } = useConfig();
+  const { updateRecordingsLocation, setSelectedDevices } = useConfig();
   const [preferences, setPreferences] = useState<RecordingPreferences>({
     save_folder: '',
     auto_save: true,
@@ -45,6 +45,10 @@ export function RecordingSettings({ onSave }: RecordingSettingsProps) {
       try {
         const prefs = await invoke<RecordingPreferences>('get_recording_preferences');
         setPreferences(prefs);
+        setSelectedDevices({
+          micDevice: prefs.preferred_mic_device ?? null,
+          systemDevice: prefs.preferred_system_device ?? null,
+        });
       } catch (error) {
         console.error('Failed to load recording preferences:', error);
         // If loading fails, get default folder path
@@ -109,6 +113,12 @@ export function RecordingSettings({ onSave }: RecordingSettingsProps) {
       preferred_system_device: devices.systemDevice
     };
     setPreferences(newPreferences);
+    // The home recording card reads this from ConfigContext. Update it now,
+    // before the save round-trip, so the card matches Settings immediately.
+    setSelectedDevices({
+      micDevice: devices.micDevice,
+      systemDevice: devices.systemDevice,
+    });
     await savePreferences(newPreferences);
 
     // Track default device preference changes

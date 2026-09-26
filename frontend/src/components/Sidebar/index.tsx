@@ -108,13 +108,13 @@ function RailIcon({ children }: { children: React.ReactNode }) {
 function RailLabel({ expanded, children }: { expanded: boolean; children: React.ReactNode }) {
   return (
     <span
-      className={`grid min-w-0 flex-1 items-center transition-[grid-template-columns,opacity] motion-reduce:transition-none ${RAIL_EASE} ${
+      className={`block min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-[max-width,opacity,transform] duration-300 motion-reduce:transition-none ${RAIL_EASE} ${
         expanded
-          ? 'grid-cols-[1fr] opacity-100 delay-75 duration-200'
-          : 'grid-cols-[0fr] opacity-0 duration-150'
+          ? 'max-w-56 translate-x-0 opacity-100'
+          : 'max-w-0 -translate-x-1 opacity-0'
       }`}
     >
-      <span className="flex min-w-0 items-center overflow-hidden">{children}</span>
+      {children}
     </span>
   );
 }
@@ -556,7 +556,7 @@ const Sidebar: React.FC = () => {
     return (
       <div key={item.id}>
         <div
-          className={`flex items-center transition-all duration-150 group select-none ${item.type === 'folder' && depth === 0
+          className={`flex items-center transition-colors duration-150 group select-none ${item.type === 'folder' && depth === 0
             ? 'p-3 text-lg font-semibold h-10 mx-3 mt-3 rounded-lg'
             : `px-2.5 py-2 my-0.5 rounded-lg text-sm ${isSelected ? 'bg-[var(--af-panel-2)] text-[var(--af-text)] ring-1 ring-[var(--af-accent)]/50' :
               isActive ? 'bg-[var(--af-panel-2)] text-[var(--af-text)] font-medium' :
@@ -615,21 +615,18 @@ const Sidebar: React.FC = () => {
                     </span>
                   )}
 
-                  <div className="min-w-0 flex-1">
-                    <div
-                      className="truncate text-[13px] leading-snug"
-                      title={item.title}
-                    >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate whitespace-nowrap text-[13px] leading-5" title={item.title}>
                       {item.title}
-                    </div>
-                    {isMeetingItem && (
-                      <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-1.5 text-[11px] leading-tight text-[var(--af-text-3)]">
-                        {meetingDate && <span className="truncate">{formatMeetingDate(meetingDate)}</span>}
-                        {meetingDate && durationLabel && <span aria-hidden>·</span>}
-                        {durationLabel && <span className="shrink-0 tabular-nums">{durationLabel}</span>}
-                      </div>
+                    </span>
+                    {isMeetingItem && (meetingDate || durationLabel) && (
+                      <span className="mt-0.5 block truncate whitespace-nowrap text-[11px] leading-4 text-[var(--af-text-3)]">
+                        {meetingDate ? formatMeetingDate(meetingDate) : ''}
+                        {meetingDate && durationLabel ? ' · ' : ''}
+                        {durationLabel}
+                      </span>
                     )}
-                  </div>
+                  </span>
 
                   {isMeetingItem && (
                     <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center gap-0.5 rounded-md bg-[var(--af-panel)] p-0.5 opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
@@ -795,13 +792,13 @@ const Sidebar: React.FC = () => {
               <div
                 ref={meetingListRef}
                 aria-hidden={!expanded}
-                className={`mt-1 flex min-h-0 flex-1 flex-col overflow-hidden transition-opacity motion-reduce:transition-none ${RAIL_EASE} ${
-                  expanded ? 'opacity-100 delay-100 duration-200' : 'pointer-events-none opacity-0 duration-100'
+                className={`mt-1 flex min-h-0 flex-1 flex-col overflow-hidden transition-[opacity,transform] duration-300 motion-reduce:transition-none ${RAIL_EASE} ${
+                  expanded ? 'translate-x-0 opacity-100' : 'pointer-events-none -translate-x-1 opacity-0'
                 }`}
               >
                 {selectedIds.size > 0 && (
-                  <div className="mb-1 flex items-center justify-between rounded-md bg-blue-50 px-3 py-2 text-sm">
-                    <span className="font-medium text-blue-700">{selectedIds.size} selected</span>
+                  <div className="mb-1 flex items-center justify-between gap-2 overflow-hidden whitespace-nowrap rounded-md bg-blue-50 px-3 py-2 text-sm">
+                    <span className="min-w-0 truncate font-medium text-blue-700">{selectedIds.size} selected</span>
                     <div className="flex items-center gap-2">
                       <button type="button" onClick={clearSelection} className="text-gray-500 hover:text-gray-700">Clear</button>
                       <button

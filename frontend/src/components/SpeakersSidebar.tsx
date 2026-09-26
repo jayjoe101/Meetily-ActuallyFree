@@ -146,7 +146,7 @@ export function SpeakersSidebar({
         )}
 
         {/* Speaker List */}
-        <div className={`flex-1 overflow-y-auto ${compact ? 'space-y-1.5 p-2' : 'space-y-3 p-4'}`}>
+        <div key={compact ? 'compact' : 'full'} className={`af-settle flex-1 overflow-y-auto ${compact ? 'space-y-1.5 p-2' : 'space-y-3 p-4'}`}>
           {speakers.length === 0 ? (
             <div className={`text-center text-[var(--af-text-3,#6b7280)] ${compact ? 'px-1 py-8' : 'px-2 py-12'}`}>
               <Users size={compact ? 22 : 32} className="mx-auto mb-2 opacity-40" />

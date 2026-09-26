@@ -25,7 +25,7 @@ import { useEffect, useRef, useState, RefObject } from 'react';
 import { toast } from 'sonner';
 import { Languages, ChevronDown, AlertCircle } from 'lucide-react';
 import { ToolbarButton as Button } from './ToolbarButton';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
 import { LanguagePickerPopover } from '@/components/LanguagePickerPopover';
 import { useRecentLanguages } from '@/hooks/useRecentLanguages';
 import { labelForCode } from '@/lib/summary-languages';
@@ -119,6 +119,9 @@ export function SummaryPanel({
   const [summaryLang, setSummaryLang] = useState<string | null>(null);
   const [summaryLangStorage, setSummaryLangStorage] = useState<SummaryLanguageStorage>('metadata');
   const [langPickerOpen, setLangPickerOpen] = useState(false);
+  const [toolbarTight, setToolbarTight] = useState(false);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const toolbarNeededRef = useRef(0);
   const languageLoadVersionRef = useRef(0);
   const activeMeetingIdRef = useRef(meeting.id);
   const languageSaveVersionRef = useRef(0);
@@ -243,38 +246,45 @@ export function SummaryPanel({
 
   const isSummaryLoading = summaryStatus === 'processing' || summaryStatus === 'summarizing' || summaryStatus === 'regenerating';
 
+  useEffect(() => {
+    const el = toolbarRef.current;
+    if (!el) return;
+    const read = () => {
+      setToolbarTight((currently) => {
+        if (!currently) {
+          toolbarNeededRef.current = el.scrollWidth;
+          return el.scrollWidth > el.clientWidth + 1;
+        }
+        return el.clientWidth < toolbarNeededRef.current + 8;
+      });
+    };
+    read();
+    const observer = new ResizeObserver(read);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [aiSummary, summaryStatus, effectiveLangLabel]);
+
   const languageSlot = (
-    <Popover open={langPickerOpen} onOpenChange={setLangPickerOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          title={`Summary language: ${effectiveLangLabel}${isLocalFallbackLanguage ? ' (saved on this device)' : ''}`}
-          aria-label="Set summary language"
-        >
-          <Languages size={18} />
-          <span className="max-w-[6.5rem] truncate text-xs">{effectiveLangLabel}</span>
-          <ChevronDown size={14} className="text-gray-400" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        className="w-auto p-0 border-0 shadow-none bg-transparent"
+    <PopoverTrigger asChild>
+      <Button
+        variant="outline"
+        size="sm"
+        title={`Summary language: ${effectiveLangLabel}${isLocalFallbackLanguage ? ' (saved on this device)' : ''}`}
+        aria-label="Set summary language"
       >
-        <LanguagePickerPopover
-          value={summaryLang}
-          onChange={handleLangChange}
-          onClose={() => setLangPickerOpen(false)}
-          autoSubtitle={autoSubtitle}
-        />
-      </PopoverContent>
-    </Popover>
+        <Languages size={18} />
+        <span className="max-w-[6.5rem] truncate whitespace-nowrap text-xs">{effectiveLangLabel}</span>
+        <ChevronDown size={14} className="text-gray-400" />
+      </Button>
+    </PopoverTrigger>
   );
 
   return (
     <div className="summary-actions-container flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-[var(--af-panel)]">
-      <div className="summary-toolbar flex h-12 shrink-0 items-center gap-2 border-b border-[var(--af-border)] bg-[var(--af-panel)] px-3">
-        <div className="min-w-0 max-w-full">
+      <Popover open={langPickerOpen} onOpenChange={setLangPickerOpen}>
+      <PopoverAnchor asChild>
+      <div ref={toolbarRef} className="summary-toolbar flex h-12 shrink-0 items-center gap-2 overflow-hidden border-b border-[var(--af-border)] bg-[var(--af-panel)] px-3">
+        <div className="flex shrink-0 items-center">
           <SummaryGeneratorButtonGroup
             modelConfig={modelConfig}
             setModelConfig={setModelConfig}
@@ -292,12 +302,18 @@ export function SummaryPanel({
             hasSummary={!!aiSummary}
             isModelConfigLoading={isModelConfigLoading}
             onOpenModelSettings={onOpenModelSettings}
-            languageSlot={languageSlot}
+            languageSlot={toolbarTight ? undefined : languageSlot}
+            collapsed={toolbarTight}
+            languageLabel={effectiveLangLabel}
+            onOpenLanguage={() => setLangPickerOpen(true)}
+            onSaveSummary={aiSummary ? onSaveAll : undefined}
+            onCopySummary={aiSummary ? onCopySummary : undefined}
+            summarySaving={isSaving}
           />
         </div>
 
-        {aiSummary && (
-          <div className="ml-auto min-w-0 max-w-full">
+        {aiSummary && !toolbarTight && (
+          <div className="ml-auto flex shrink-0 items-center">
             <SummaryUpdaterButtonGroup
               isSaving={isSaving}
               isDirty={isTitleDirty || (summaryRef.current?.isDirty || false)}
@@ -309,6 +325,19 @@ export function SummaryPanel({
           </div>
         )}
       </div>
+      </PopoverAnchor>
+      <PopoverContent
+        align="end"
+        className="w-auto border-0 bg-transparent p-0 shadow-none"
+      >
+        <LanguagePickerPopover
+          value={summaryLang}
+          onChange={handleLangChange}
+          onClose={() => setLangPickerOpen(false)}
+          autoSubtitle={autoSubtitle}
+        />
+      </PopoverContent>
+      </Popover>
 
       {summaryError && !isSummaryLoading && (
         <div

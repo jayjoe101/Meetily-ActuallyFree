@@ -9,9 +9,9 @@ interface MainContentProps {
 
 const MainContent: React.FC<MainContentProps> = ({ children }) => {
   const pathname = usePathname();
-  // The recording chat sits flush against the rail divider. A left inset
-  // exposed the darker canvas as its own strip beside the transcript.
-  const chat = pathname === '/';
+  // Recording and saved meetings sit flush against the rail divider, in the
+  // same panel color. A left inset exposed the darker canvas as its own strip.
+  const chat = pathname === '/' || pathname === '/meeting-details';
 
   return (
     // min-w-0 is required: flex items default to min-width:auto and will not

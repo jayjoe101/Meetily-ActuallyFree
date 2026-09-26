@@ -712,7 +712,7 @@ const Sidebar: React.FC = () => {
 
   return (
     <div
-      className={`af-rail fixed top-0 left-0 z-20 h-screen overflow-hidden ${dragging ? '' : 'transition-[width] duration-300 ease-[cubic-bezier(0.22,1.25,0.36,1)] motion-reduce:transition-none'}`}
+      className={`af-rail fixed top-0 left-0 z-20 h-screen overflow-hidden ${dragging ? 'is-resizing' : 'transition-[width,border-color] duration-300 ease-[cubic-bezier(0.22,1.25,0.36,1)] motion-reduce:transition-none'}`}
       style={{ width: sidebarWidth }}
     >
       <TooltipProvider>
@@ -725,7 +725,7 @@ const Sidebar: React.FC = () => {
             aria-valuemax={256}
             aria-valuenow={sidebarWidth}
             onPointerDown={startResize}
-            className="absolute inset-y-0 right-0 z-10 w-1.5 cursor-col-resize"
+            className="af-rail-resize absolute inset-y-0 right-0 z-10 w-1.5 cursor-col-resize"
           />
 
           <div className="flex h-full w-full min-w-0 flex-col overflow-hidden bg-[var(--af-panel)] shadow-none">

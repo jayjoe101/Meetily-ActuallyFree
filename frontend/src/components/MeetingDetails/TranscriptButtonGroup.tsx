@@ -3,8 +3,8 @@ import { Spinner } from '@/components/ui/spinner';
 
 import { useState, useCallback, useEffect } from 'react';
 import { ToolbarButton as Button } from './ToolbarButton';
-import { ButtonGroup } from '@/components/ui/button-group';
-import { Copy, Download, FolderOpen, RefreshCw, Users} from 'lucide-react';
+import { Copy, Download, FolderOpen, MoreHorizontal, RefreshCw, Users } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import Analytics from '@/lib/analytics';
 import { RetranscribeDialog } from './RetranscribeDialog';
 import { useConfig } from '@/contexts/ConfigContext';
@@ -105,96 +105,78 @@ export function TranscriptButtonGroup({
     }
   }, [meetingId, isDiarizing, onRefetchTranscripts]);
 
+  const iconButton = 'h-8 w-8 shrink-0 px-0';
+  const canUseTranscript = transcriptCount > 0;
+
   return (
-    <div className="flex w-full min-w-0 items-center justify-end">
-      <ButtonGroup className="meeting-toolbar-group justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          className="transcript-action-button h-9 w-9 shrink-0 px-0"
-          onClick={() => {
-            Analytics.trackButtonClick('copy_transcript', 'meeting_details');
-            onCopyTranscript();
-          }}
-          disabled={transcriptCount === 0}
-          title={transcriptCount === 0 ? 'No transcript available' : 'Copy Transcript'}
-        >
-          <Copy size={16} />
-          <span className="transcript-action-label">Copy</span>
-        </Button>
+    <div className="flex items-center gap-1.5">
+      <Button
+        variant="outline"
+        size="sm"
+        className={iconButton}
+        onClick={() => {
+          Analytics.trackButtonClick('copy_transcript', 'meeting_details');
+          onCopyTranscript();
+        }}
+        disabled={!canUseTranscript}
+        title={canUseTranscript ? 'Copy transcript' : 'No transcript yet'}
+      >
+        <Copy size={15} />
+      </Button>
 
-        {onOpenExport && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="transcript-action-button h-9 w-9 shrink-0 px-0"
-            onClick={() => {
-              Analytics.trackButtonClick('open_meeting_export', 'meeting_details');
-              onOpenExport();
-            }}
-            disabled={transcriptCount === 0}
-            title={transcriptCount === 0 ? 'No meeting content available' : 'Export meeting'}
-          >
-            <Download size={16} />
-            <span className="transcript-action-label">Export</span>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className={iconButton} title="More meeting actions" aria-label="More meeting actions">
+            {isDiarizing ? <Spinner size={15} /> : <MoreHorizontal size={15} />}
           </Button>
-        )}
-
-        <Button
-          size="sm"
-          variant="outline"
-          className="transcript-action-button h-9 w-9 shrink-0 px-0"
-          onClick={() => {
-            Analytics.trackButtonClick('open_recording_folder', 'meeting_details');
-            onOpenMeetingFolder();
-          }}
-          title="Open Recording Folder"
-        >
-          <FolderOpen size={16} />
-          <span className="transcript-action-label">Recording</span>
-        </Button>
-
-        {diarizeAvailable && meetingId && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="transcript-action-button h-9 w-9 shrink-0 px-0"
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          {onOpenExport && (
+            <DropdownMenuItem
+              disabled={!canUseTranscript}
+              onClick={() => {
+                Analytics.trackButtonClick('open_meeting_export', 'meeting_details');
+                onOpenExport();
+              }}
+            >
+              <Download />
+              Export
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem
             onClick={() => {
-              setExpectedSpeakers('');
-              setShowSpeakerDialog(true);
+              Analytics.trackButtonClick('open_recording_folder', 'meeting_details');
+              onOpenMeetingFolder();
             }}
-            disabled={isDiarizing || transcriptCount === 0}
-            title={
-              transcriptCount === 0
-                ? 'No transcript available'
-                : 'Identify who spoke when, using the local diarization models'
-            }
           >
-            {isDiarizing ? (
-              <Spinner className="" size={16} />
-            ) : (
-              <Users size={16} />
-            )}
-            <span className="transcript-action-label">{isDiarizing ? 'Working…' : 'Speakers'}</span>
-          </Button>
-        )}
-
-        {betaFeatures.importAndRetranscribe && meetingId && meetingFolderPath && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="transcript-action-button h-9 w-9 shrink-0 border-blue-500/30 bg-blue-500/10 px-0 text-blue-300 hover:bg-blue-500/20"
-            onClick={() => {
-              Analytics.trackButtonClick('enhance_transcript', 'meeting_details');
-              setShowRetranscribeDialog(true);
-            }}
-            title="Retranscribe to enhance your recorded audio"
-          >
-            <RefreshCw size={16} />
-            <span className="transcript-action-label">Enhance</span>
-          </Button>
-        )}
-      </ButtonGroup>
+            <FolderOpen />
+            Open folder
+          </DropdownMenuItem>
+          {diarizeAvailable && meetingId && (
+            <DropdownMenuItem
+              disabled={isDiarizing || !canUseTranscript}
+              onClick={() => {
+                setExpectedSpeakers('');
+                setShowSpeakerDialog(true);
+              }}
+            >
+              <Users />
+              Identify speakers
+            </DropdownMenuItem>
+          )}
+          {betaFeatures.importAndRetranscribe && meetingId && meetingFolderPath && (
+            <DropdownMenuItem
+              onClick={() => {
+                Analytics.trackButtonClick('enhance_transcript', 'meeting_details');
+                setShowRetranscribeDialog(true);
+              }}
+            >
+              <RefreshCw />
+              Enhance transcript
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* Ask how many speakers to expect before diarizing */}
       <Dialog open={showSpeakerDialog} onOpenChange={setShowSpeakerDialog}>
@@ -204,10 +186,8 @@ export function TranscriptButtonGroup({
             Identify speakers
           </DialogTitle>
           <div className="mt-2 space-y-3">
-            <p className="text-sm text-gray-500">
-              How many distinct voices were in this meeting, <span className="text-[var(--af-text,#374151)] font-medium">including you</span>?
-              For example, you plus one other person is <span className="text-[var(--af-text,#374151)] font-medium">2</span>.
-              Entering the count is much more accurate than auto-detect — leave blank to guess.
+            <p className="text-sm text-[var(--af-text-2)]">
+              How many voices, including you? Leave blank to guess.
             </p>
             <input
               type="number"

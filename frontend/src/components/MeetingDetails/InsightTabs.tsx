@@ -13,12 +13,10 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
   Sparkles,
-  Plus,
   Circle,
   CheckCircle2,
   Send,
@@ -349,9 +347,8 @@ export function InsightTabs({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--af-bg)]">
-      {/* Scrolling content */}
-      <div className="min-h-0 flex-1 space-y-8 overflow-y-auto px-6 py-6">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--af-panel)]">
+      <div className="min-h-0 flex-1 space-y-8 overflow-y-auto px-5 py-5">
         {/* AI Summary */}
         <section>
           <div className="mb-3 flex items-center gap-2">
@@ -364,17 +361,9 @@ export function InsightTabs({
               Generating summary…
             </div>
           ) : !hasSummary ? (
-            <div className="rounded-xl border border-dashed border-[var(--af-border-strong)] p-8 text-center">
-              <Sparkles size={26} className="mx-auto mb-3 text-cyan-400" />
-              <p className="mb-4 text-sm text-[var(--af-text-2)]">
-                No summary yet. Generate an AI summary with key points, action items and topics.
-              </p>
-              <p className="text-xs text-[var(--af-text-3)]">
-                {transcripts.length > 0
-                  ? 'Use the summary toolbar above to choose a template and generate.'
-                  : 'A transcript is required before a summary can be generated.'}
-              </p>
-            </div>
+            <p className="text-sm text-[var(--af-text-3)]">
+              {transcripts.length > 0 ? 'No summary yet.' : 'A transcript is needed before a summary can be written.'}
+            </p>
           ) : (
             <>
               {summaryText ? (
@@ -394,9 +383,6 @@ export function InsightTabs({
             <Sparkles size={18} className="text-cyan-400" />
             <h3 className="text-base font-semibold text-[var(--af-text)]">Action Items</h3>
             {!generating && actions.length > 0 && <span className="text-sm font-medium text-[var(--af-text-3)]">{actions.length}</span>}
-            <div className="ml-auto">
-              <ToolbarButton icon={<Plus size={14} />} onClick={() => toast.info('Adding action items is coming soon')}>Add action item</ToolbarButton>
-            </div>
           </div>
           {generating ? (
             <div className="flex items-center gap-3 py-2 text-sm text-[var(--af-text-2)]">
@@ -524,28 +510,6 @@ export function InsightTabs({
         </div>
       </div>
     </div>
-  );
-}
-
-function ToolbarButton({
-  icon,
-  children,
-  onClick,
-  className = '',
-}: {
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-  onClick?: () => void;
-  className?: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 rounded-lg border border-[var(--af-border-strong)] px-3 py-1.5 text-sm text-[var(--af-text-2)] transition-colors hover:bg-[var(--af-hover)] hover:text-[var(--af-text)] ${className}`}
-    >
-      {icon}
-      {children}
-    </button>
   );
 }
 

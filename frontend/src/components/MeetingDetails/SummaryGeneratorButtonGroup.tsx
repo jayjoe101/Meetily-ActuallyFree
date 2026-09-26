@@ -253,7 +253,7 @@ export function SummaryGeneratorButtonGroup({
         <Button
           variant="outline"
           size="sm"
-          className="bg-gradient-to-r from-red-50 to-orange-50 hover:from-red-100 hover:to-orange-100 border-red-200 xl:px-4"
+          className="border-transparent bg-red-500/15 text-red-200 hover:bg-red-500/25"
           onClick={() => {
             Analytics.trackButtonClick('stop_summary_generation', 'meeting_details');
             onStopGeneration();
@@ -261,14 +261,14 @@ export function SummaryGeneratorButtonGroup({
           title="Stop summary generation"
           aria-label="Stop summary generation"
         >
-          <Square className="xl:mr-2" size={18} fill="currentColor" />
-           <span className="summary-action-label summary-primary-label">Stop</span>
+          <Square size={15} fill="currentColor" />
+          <span className="summary-primary-label">Stop</span>
         </Button>
       ) : (
         <Button
           variant="outline"
           size="sm"
-          className="bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border-blue-200 xl:px-4"
+          className="border-transparent bg-[var(--af-accent)] text-white hover:brightness-110"
           onClick={handlePrimaryClick}
           disabled={isCheckingModels || isModelConfigLoading}
           title={
@@ -282,13 +282,12 @@ export function SummaryGeneratorButtonGroup({
         >
           {isCheckingModels || isModelConfigLoading ? (
             <>
-              <Spinner className=" xl:mr-2" size={18} />
-              <span className="summary-action-label summary-primary-label">Processing...</span>
+              <Spinner size={15} />
             </>
           ) : (
             <>
-              <Sparkles className="xl:mr-2" size={18} />
-              <span className="summary-action-label summary-primary-label">{hasSummary ? 'Regenerate Summary' : 'Generate Summary'}</span>
+              <Sparkles size={15} />
+              <span className="summary-primary-label">{hasSummary ? 'Regenerate' : 'Summary'}</span>
             </>
           )}
         </Button>

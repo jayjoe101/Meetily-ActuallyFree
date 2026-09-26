@@ -388,7 +388,7 @@ function MeetingDetailsContent() {
   // state (status + just-generated aiSummary).
   if (!meetingDetails) {
     return (
-      <div className="h-screen bg-[var(--af-bg)]">
+      <div className="h-screen bg-[var(--af-panel)]">
         {source === 'recording' ? (
           <PostCallHandoffCard
             sidebarCollapsed={sidebarCollapsed}

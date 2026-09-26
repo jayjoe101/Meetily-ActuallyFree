@@ -16,7 +16,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { Transcript, TranscriptSegmentData, DetectedSpeaker } from '@/types';
-import { Calendar, Clock, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { SpeakerRenameDialog } from './SpeakerRenameDialog';
 import { VirtualizedTranscriptView } from '@/components/VirtualizedTranscriptView';
 import { TranscriptButtonGroup } from './TranscriptButtonGroup';
@@ -125,7 +125,7 @@ export function TranscriptPanel({
     const end = durationSec > 0 ? new Date(start.getTime() + durationSec * 1000) : null;
     return {
       dateLabel: fmtDate(start),
-      timeLabel: end ? `${fmtTime(start)} — ${fmtTime(end)}` : fmtTime(start),
+      timeLabel: end ? `${fmtTime(start)}–${fmtTime(end)}` : fmtTime(start),
     };
   }, [createdAt, convertedSegments]);
 
@@ -179,55 +179,34 @@ export function TranscriptPanel({
   };
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--af-bg)]">
-      {/* Header: title + date/time */}
-      <div className="min-w-0 px-4 pt-5 sm:px-6 sm:pt-6 lg:px-8">
-        <h1 className="truncate text-xl font-bold text-[var(--af-text)] sm:text-2xl">
-          {title || 'Untitled meeting'}
-        </h1>
-        {(dateLabel || timeLabel) && (
-          <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--af-text-2)]">
-            {dateLabel && (
-              <span className="inline-flex min-w-0 items-center gap-1.5">
-                <Calendar size={15} className="shrink-0 text-[var(--af-text-3)]" />
-                <span className="truncate">{dateLabel}</span>
-              </span>
-            )}
-            {timeLabel && (
-              <span className="inline-flex min-w-0 items-center gap-1.5">
-                <Clock size={15} className="shrink-0 text-[var(--af-text-3)]" />
-                <span className="truncate">{timeLabel}</span>
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* The action container owns its responsive breakpoint, since this column
-          can be narrow even when the overall window is wide. */}
-      <div className="mt-4 flex min-w-0 shrink-0 flex-wrap items-center gap-2 border-b border-[var(--af-border)] px-4 sm:mt-5 sm:gap-3 sm:px-6 lg:px-8">
-        <span className="relative -mb-px shrink-0 py-2 text-sm font-medium text-[var(--af-accent)]">
-          Transcript
-          <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-[var(--af-accent)]" />
-        </span>
-        <div className="transcript-actions-container ml-auto min-w-0 flex-[1_1_190px] py-1 flex items-center justify-end gap-2">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--af-panel)]">
+      <div className="flex min-w-0 items-center gap-3 border-b border-[var(--af-border)] px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-base font-semibold text-[var(--af-text)]">
+            {title || 'Untitled meeting'}
+          </h1>
+          {(dateLabel || timeLabel) && (
+            <p className="mt-0.5 truncate text-xs text-[var(--af-text-3)]">
+              {[dateLabel, timeLabel].filter(Boolean).join(' · ')}
+            </p>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
           <button
             type="button"
             onClick={() => setShowSpeakersSidebar((prev) => !prev)}
-            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors duration-200 ${
+            className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2 text-xs font-medium transition-colors ${
               showSpeakersSidebar
-                ? 'border-[var(--af-accent)] bg-[var(--af-accent-soft)] font-semibold text-[var(--af-accent)]'
-                : 'border-[var(--af-border)] text-[var(--af-text-2)] hover:bg-[var(--af-panel-2)]'
+                ? 'border-[var(--af-accent)] bg-[var(--af-accent-soft)] text-[var(--af-accent)]'
+                : 'border-[var(--af-border)] text-[var(--af-text-2)] hover:bg-[var(--af-hover)]'
             }`}
             title="Speakers"
             aria-expanded={showSpeakersSidebar}
+            aria-label="Speakers"
           >
             <Users size={14} />
-            <span>Speakers</span>
             {detectedSpeakers.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold">
-                {detectedSpeakers.length}
-              </span>
+              <span className="tabular-nums">{detectedSpeakers.length}</span>
             )}
           </button>
           <TranscriptButtonGroup
@@ -278,7 +257,7 @@ export function TranscriptPanel({
 
       {/* Transcript content + Speakers sidebar */}
       <div className="flex flex-1 overflow-hidden min-h-0">
-        <div className="flex-1 overflow-hidden px-4 pb-4">
+        <div className="min-h-0 flex-1 overflow-hidden px-3 pb-3">
           <VirtualizedTranscriptView
             onRenameSpeaker={meetingId ? setRenameTarget : undefined}
             onMergeSpeaker={meetingId ? setMergeTarget : undefined}

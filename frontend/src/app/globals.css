@@ -379,6 +379,10 @@ html[data-sidebar-drag] .af-rail > * {
   box-shadow: none !important;
   border-right: 1px solid var(--af-border);
 }
+.af-rail:has(.af-rail-resize:hover),
+.af-rail.is-resizing {
+  border-right-color: var(--af-accent);
+}
 
 .af-spinner {
   animation: af-spin 0.7s linear infinite;
@@ -695,17 +699,6 @@ html.dark {
   display: none;
 }
 
-@container transcript-actions (min-width: 520px) {
-  .transcript-action-button {
-    width: auto;
-    padding-inline: 0.75rem;
-  }
-
-  .transcript-action-label {
-    display: inline;
-  }
-}
-
 /* These toolbars can be narrow even on a wide screen. Keep every action in
    reach by wrapping groups; never require horizontal scrolling to find Export. */
 .meeting-toolbar-group {
@@ -723,6 +716,15 @@ html.dark {
 .summary-toolbar .summary-action-label {
   display: none;
 }
+.summary-toolbar .summary-primary-label {
+  display: inline;
+}
+.summary-toolbar {
+  overflow-x: auto;
+}
+.summary-toolbar .meeting-toolbar-group {
+  flex-wrap: nowrap;
+}
 .summary-toolbar .meeting-toolbar-group > button {
   height: 2.25rem;
   padding-inline: 0.5rem;
@@ -731,13 +733,7 @@ html.dark {
 .summary-toolbar .meeting-toolbar-group > button > svg {
   margin: 0;
 }
-@container summary-actions (min-width: 560px) {
-  .summary-toolbar .summary-primary-label { display: inline; }
-}
-@container summary-actions (min-width: 800px) {
-  .summary-toolbar .summary-action-label { display: inline; }
-  .summary-toolbar .meeting-toolbar-group > button { padding-inline: 0.75rem; }
-}
+
 
 /* Scrollbars. Default Windows scrollbars are bright and heavy, and this app is
    mostly long scrolling surfaces (transcripts, summaries), so they're a

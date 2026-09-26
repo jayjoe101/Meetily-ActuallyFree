@@ -253,7 +253,7 @@ export function SummaryPanel({
           aria-label="Set summary language"
         >
           <Languages size={18} />
-          <span className="summary-action-label">{effectiveLangLabel}</span>
+          <span className="max-w-[6.5rem] truncate text-xs">{effectiveLangLabel}</span>
           <ChevronDown size={14} className="text-gray-400" />
         </Button>
       </PopoverTrigger>
@@ -272,8 +272,8 @@ export function SummaryPanel({
   );
 
   return (
-    <div className="summary-actions-container flex min-h-0 min-w-0 w-full flex-[1.15] flex-col overflow-hidden border-t border-[var(--af-border)] bg-[var(--af-bg)] md:min-w-[280px] md:border-l md:border-t-0 lg:max-w-[960px]">
-      <div className="summary-toolbar flex min-h-12 shrink-0 flex-wrap items-center gap-2 border-b border-[var(--af-border)] bg-[var(--af-panel)] px-3 py-2">
+    <div className="summary-actions-container flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-[var(--af-panel)]">
+      <div className="summary-toolbar flex h-12 shrink-0 items-center gap-2 border-b border-[var(--af-border)] bg-[var(--af-panel)] px-3">
         <div className="min-w-0 max-w-full">
           <SummaryGeneratorButtonGroup
             modelConfig={modelConfig}
@@ -303,11 +303,6 @@ export function SummaryPanel({
               isDirty={isTitleDirty || (summaryRef.current?.isDirty || false)}
               onSave={onSaveAll}
               onCopy={onCopySummary}
-              onExport={onOpenExport}
-              onFind={() => {
-                // TODO: Implement find in summary functionality
-                console.log('Find in summary clicked');
-              }}
               onOpenFolder={onOpenFolder}
               hasSummary={true}
             />

@@ -3,7 +3,7 @@ import { Spinner } from '@/components/ui/spinner';
 
 import { ToolbarButton as Button } from './ToolbarButton';
 import { ButtonGroup } from '@/components/ui/button-group';
-import { Copy, Save,  Search, FolderOpen, Download } from 'lucide-react';
+import { Copy, Save } from 'lucide-react';
 import Analytics from '@/lib/analytics';
 
 interface SummaryUpdaterButtonGroupProps {
@@ -33,7 +33,7 @@ export function SummaryUpdaterButtonGroup({
       <Button
         variant="outline"
         size="sm"
-        className={`${isDirty ? 'bg-green-200' : ""}`}
+        className={isDirty ? 'border-[var(--af-accent)] text-[var(--af-accent)]' : ''}
         title={isSaving ? "Saving" : "Save Changes"}
         onClick={() => {
           Analytics.trackButtonClick('save_changes', 'meeting_details');
@@ -69,41 +69,6 @@ export function SummaryUpdaterButtonGroup({
         <Copy />
         <span className="summary-action-label">Copy</span>
       </Button>
-
-      {/* Meeting export flow */}
-      {onExport && (
-        <Button
-          variant="outline"
-          size="sm"
-          title="Export meeting"
-          onClick={() => {
-            Analytics.trackButtonClick('open_meeting_export', 'meeting_details');
-            onExport();
-          }}
-          className="cursor-pointer"
-        >
-          <Download />
-          <span className="summary-action-label">Export</span>
-        </Button>
-      )}
-
-      {/* Find button */}
-      {/* {onFind && (
-        <Button
-          variant="outline"
-          size="sm"
-          title="Find in Summary"
-          onClick={() => {
-            Analytics.trackButtonClick('find_in_summary', 'meeting_details');
-            onFind();
-          }}
-          disabled={!hasSummary}
-          className="cursor-pointer"
-        >
-          <Search />
-          <span className="hidden lg:inline">Find</span>
-        </Button>
-      )} */}
     </ButtonGroup>
   );
 }

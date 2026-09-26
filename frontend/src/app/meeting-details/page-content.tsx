@@ -1,5 +1,5 @@
 ﻿"use client";
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type PointerEvent as ReactPointerEvent } from 'react';
 import { motion } from 'framer-motion';
 import { Summary, SummaryResponse } from '@/types';
 import { useSidebar } from '@/components/Sidebar/SidebarProvider';
@@ -25,6 +25,17 @@ import { SummaryRegenerationDialog } from '@/components/MeetingDetails/SummaryRe
 // Page remounts join the same backend-start attempt. Only accepted attempts are
 // persisted in sessionStorage below; failed preflight attempts remain retryable.
 const autoSummaryInFlight = new Map<string, Promise<boolean>>();
+const NOTES_WIDTH_KEY = 'af-meeting-notes-width';
+const NOTES_MIN = 320;
+const TRANSCRIPT_MIN = 300;
+
+function clampNotesWidth(width: number, frame: number) {
+  const available = Math.max(0, frame - 6);
+  const notesMin = Math.min(NOTES_MIN, Math.max(180, available * 0.34));
+  const transcriptMin = Math.min(TRANSCRIPT_MIN, Math.max(180, available - notesMin));
+  const max = Math.max(notesMin, available - transcriptMin);
+  return Math.round(Math.min(max, Math.max(notesMin, width)));
+}
 
 export default function PageContent({
   meeting,
@@ -73,6 +84,10 @@ export default function PageContent({
   const [summaryResponse] = useState<SummaryResponse | null>(null);
   const [postCallProcessingCompletedMeetingId, setPostCallProcessingCompletedMeetingId] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const [notesWidth, setNotesWidth] = useState(480);
+  const [stacked, setStacked] = useState(false);
+  const [draggingSplit, setDraggingSplit] = useState(false);
+  const frameRef = useRef<HTMLDivElement>(null);
   const [regenerationRequest, setRegenerationRequest] = useState<{
     open: boolean;
     initialContext: string;
@@ -170,6 +185,53 @@ export default function PageContent({
     Analytics.trackPageView('meeting_details');
   }, []);
 
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const apply = () => setStacked(mq.matches);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
+
+  useEffect(() => {
+    const frame = frameRef.current?.clientWidth ?? window.innerWidth;
+    const stored = Number(localStorage.getItem(NOTES_WIDTH_KEY));
+    const next = Number.isFinite(stored) && stored > 0 ? stored : Math.round(frame * 0.46);
+    setNotesWidth(clampNotesWidth(next, frame));
+  }, []);
+
+  useEffect(() => {
+    const onResize = () => {
+      const frame = frameRef.current?.clientWidth;
+      if (!frame) return;
+      setNotesWidth((current) => clampNotesWidth(current, frame));
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const startSplitDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const originX = event.clientX;
+    const origin = notesWidth;
+    setDraggingSplit(true);
+    const move = (moveEvent: PointerEvent) => {
+      const frame = frameRef.current?.clientWidth ?? origin + TRANSCRIPT_MIN;
+      setNotesWidth(clampNotesWidth(origin - (moveEvent.clientX - originX), frame));
+    };
+    const stop = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+      setDraggingSplit(false);
+      setNotesWidth((current) => {
+        localStorage.setItem(NOTES_WIDTH_KEY, String(current));
+        return current;
+      });
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', stop);
+  };
+
   // Auto-generate summary when flag is set
   useEffect(() => {
     const autoGenerate = async () => {
@@ -232,9 +294,13 @@ export default function PageContent({
       initial={isPostCallRecording ? false : { opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: isPostCallRecording ? 0 : 0.3, ease: 'easeOut' }}
-      className="flex flex-col h-screen bg-[var(--af-bg)]"
+      className="flex h-screen flex-col bg-[var(--af-panel)]"
     >
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--af-bg)] md:flex-row">
+      <div
+        ref={frameRef}
+        className={`flex min-h-0 min-w-0 flex-1 overflow-hidden bg-[var(--af-panel)] ${stacked ? 'flex-col' : 'flex-row'} ${draggingSplit ? 'select-none' : ''}`}
+      >
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <TranscriptPanel
           transcripts={meetingData.transcripts}
           title={meetingData.meetingTitle}
@@ -269,6 +335,24 @@ export default function PageContent({
           meetingFolderPath={meeting.folder_path}
           onRefetchTranscripts={onRefetchTranscripts}
         />
+        </div>
+        {!stacked && (
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize transcript and notes"
+            aria-valuemin={NOTES_MIN}
+            aria-valuenow={notesWidth}
+            onPointerDown={startSplitDrag}
+            className="group relative z-10 w-1.5 shrink-0 cursor-col-resize"
+          >
+            <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-[var(--af-border)] transition-colors group-hover:bg-[var(--af-accent)] group-active:bg-[var(--af-accent)]" />
+          </div>
+        )}
+        <div
+          className={stacked ? 'flex min-h-0 min-w-0 flex-1 flex-col border-t border-[var(--af-border)]' : 'flex h-full shrink-0 flex-col'}
+          style={stacked ? undefined : { width: notesWidth }}
+        >
         <SummaryPanel
           meeting={meeting}
           meetingTitle={meetingData.meetingTitle}
@@ -311,6 +395,7 @@ export default function PageContent({
           isModelConfigLoading={false}
           onOpenModelSettings={handleRegisterModalOpen}
         />
+        </div>
       </div>
 
       <TemplateEditorModal

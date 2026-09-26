@@ -128,8 +128,9 @@ export function TranscriptPanel({
                     variant={showSpeakersSidebar ? "secondary" : "outline"}
                     size="sm"
                     onClick={() => setShowSpeakersSidebar((prev) => !prev)}
-                    title="Toggle detected speakers"
-                    className={showSpeakersSidebar ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300" : ""}
+                    title="Speakers"
+                    aria-expanded={showSpeakersSidebar}
+                    className={`transition-colors duration-200 ${showSpeakersSidebar ? "border-[var(--af-accent)] bg-[var(--af-accent-soft)] text-[var(--af-accent)]" : ""}`}
                   >
                     <Users size={16} />
                     <span className='hidden md:inline ml-1.5'>

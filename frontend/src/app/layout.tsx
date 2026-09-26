@@ -154,6 +154,33 @@ export default function RootLayout({
     applyAppTheme(getSavedAppTheme())
   }, [])
 
+  // Keep the window wide enough for the expanded rail, its collapse control,
+  // the recording card, and the speakers panel without those overlapping.
+  useEffect(() => {
+    if (isMinibar) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const { getCurrentWindow, LogicalSize } = await import('@tauri-apps/api/window')
+        const win = getCurrentWindow()
+        // Shrunk live card: buttons, label, and padding stay; the meters can close.
+        // 16rem rail + 3.5rem collapse shadow + ~30.5rem card + 1.25rem gap + 20rem speakers.
+        const minWidth = 16 * 16 + 3.5 * 16 + 30.5 * 16 + 1.25 * 16 + 20 * 16
+        const min = new LogicalSize(minWidth, 700)
+        await win.setMinSize(min)
+        const factor = await win.scaleFactor()
+        const size = (await win.innerSize()).toLogical(factor)
+        if (cancelled || size.width >= minWidth) return
+        await win.setSize(new LogicalSize(minWidth, Math.max(700, size.height)))
+      } catch {
+        // Browser preview, or the desktop window is not available yet.
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isMinibar])
+
   useEffect(() => {
     let cancelled = false
     const timer = window.setTimeout(() => {

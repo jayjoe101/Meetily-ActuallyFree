@@ -467,24 +467,13 @@ export function AudioDeviceCard({
               const value = toDeviceOptionValue(device);
               const selected = selectedValue === value;
               return (
-                <button
+                <DeviceChoice
                   key={value}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onClick={() => onSelect(value)}
-                  className={`mx-1 flex h-11 w-[calc(100%-8px)] cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-left ${
-                    selected ? 'bg-[var(--af-hover)]' : 'hover:bg-[var(--af-hover)]'
-                  }`}
-                >
-                  <Icon size={14} className="shrink-0 text-[var(--af-text-3)]" />
-                  <ScrollName text={device.name} />
-                  <span
-                    className={`h-4 w-4 shrink-0 rounded-full border-2 ${
-                      selected ? 'border-[var(--af-accent)] bg-[var(--af-accent)]' : 'border-[var(--af-text-3)] bg-transparent'
-                    }`}
-                  />
-                </button>
+                  name={device.name}
+                  selected={selected}
+                  onSelect={() => onSelect(value)}
+                  icon={<Icon size={14} className="shrink-0 text-[var(--af-text-3)]" />}
+                />
               );
             })}
           </div>
@@ -538,55 +527,105 @@ export function AudioDeviceCard({
   );
 }
 
-function ScrollName({ text }: { text: string }) {
+const NAME_GAP = 32;
+
+function textWidth(sample: HTMLElement, text: string) {
+  const cs = getComputedStyle(sample);
+  const probe = document.createElement('span');
+  probe.textContent = text;
+  probe.style.cssText = [
+    'position:fixed',
+    'left:-9999px',
+    'top:0',
+    'visibility:hidden',
+    'white-space:nowrap',
+    'width:auto',
+    'max-width:none',
+    `font:${cs.font}`,
+    `letter-spacing:${cs.letterSpacing}`,
+  ].join(';');
+  document.body.appendChild(probe);
+  const width = probe.getBoundingClientRect().width;
+  probe.remove();
+  return width;
+}
+
+function DeviceChoice({
+  name,
+  selected,
+  onSelect,
+  icon,
+}: {
+  name: string;
+  selected: boolean;
+  onSelect: () => void;
+  icon: React.ReactNode;
+}) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      onClick={onSelect}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className={`mx-1 flex h-11 w-[calc(100%-8px)] cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-left ${
+        selected ? 'bg-[var(--af-hover)]' : 'hover:bg-[var(--af-hover)]'
+      }`}
+    >
+      {icon}
+      <ScrollName text={name} active={hovered} />
+      <span
+        className={`h-4 w-4 shrink-0 rounded-full border-2 ${
+          selected ? 'border-[var(--af-accent)] bg-[var(--af-accent)]' : 'border-[var(--af-text-3)] bg-transparent'
+        }`}
+      />
+    </button>
+  );
+}
+
+function ScrollName({ text, active }: { text: string; active: boolean }) {
   const outerRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
-  const [shift, setShift] = useState(0);
-  const [hover, setHover] = useState(false);
-  const looping = hover && shift > 0;
-  const duration = Math.max(2.2, shift / 40);
-
-  const measure = () => {
-    const outer = outerRef.current;
-    const node = textRef.current;
-    if (!outer || !node) return;
-    const range = document.createRange();
-    range.selectNodeContents(node);
-    const textWidth = range.getBoundingClientRect().width;
-    setShift(textWidth - outer.clientWidth > 2 ? Math.ceil(textWidth) + 32 : 0);
-  };
+  const [distance, setDistance] = useState(0);
 
   useLayoutEffect(() => {
-    if (!looping) return;
-    const node = textRef.current;
-    if (!node) return;
-    const exact = Math.ceil(node.offsetWidth) + 32;
-    setShift((current) => (Math.abs(current - exact) > 1 ? exact : current));
-  }, [looping, text]);
+    const outer = outerRef.current;
+    const sample = textRef.current;
+    if (!outer || !sample) return;
+    const measure = () => {
+      const available = outer.clientWidth;
+      if (available <= 0) return;
+      const width = textWidth(sample, text);
+      setDistance(width - available > 1 ? width + NAME_GAP : 0);
+    };
+    measure();
+    const frame = requestAnimationFrame(measure);
+    return () => cancelAnimationFrame(frame);
+  }, [text]);
+
+  const reduceMotion = typeof window !== 'undefined'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const scrolling = active && distance > 0 && !reduceMotion;
+  const duration = Math.max(1.5, distance / 52);
 
   return (
-    <span
-      ref={outerRef}
-      className="block min-w-0 flex-1 overflow-hidden"
-      onMouseEnter={() => {
-        measure();
-        setHover(true);
-      }}
-      onMouseLeave={() => setHover(false)}
-    >
-      {looping ? (
+    <span ref={outerRef} className="block h-5 min-w-0 flex-1 overflow-hidden">
+      {scrolling ? (
         <span
-          className="af-name-scroll inline-flex w-max items-center"
+          className="af-name-scroll inline-flex h-5 w-max items-center"
           style={{
-            ['--af-shift' as string]: `${shift}px`,
+            ['--af-shift' as string]: `${distance}px`,
             animationDuration: `${duration}s`,
+            animationDelay: '40ms',
           }}
         >
-          <span ref={textRef} className="inline-block whitespace-nowrap text-[13px] text-[var(--af-text)]">{text}</span>
-          <span aria-hidden className="inline-block whitespace-nowrap pl-[32px] text-[13px] text-[var(--af-text)]">{text}</span>
+          <span ref={textRef} className="inline-block whitespace-nowrap text-[13px] leading-5 text-[var(--af-text)]">{text}</span>
+          <span aria-hidden className="inline-block whitespace-nowrap pl-[32px] text-[13px] leading-5 text-[var(--af-text)]">{text}</span>
         </span>
       ) : (
-        <span ref={textRef} className="block truncate text-[13px] text-[var(--af-text)]">{text}</span>
+        <span ref={textRef} className="block truncate text-[13px] leading-5 text-[var(--af-text)]">{text}</span>
       )}
     </span>
   );

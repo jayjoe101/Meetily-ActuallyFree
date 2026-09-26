@@ -9,6 +9,7 @@ import { useRecordingState, RecordingStatus } from '@/contexts/RecordingStateCon
 import { useTranscripts } from '@/contexts/TranscriptContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import { PostCallHandoffCard } from '@/components/PostCallHandoffCard';
+import { RecordingCardSlot } from '@/components/RecordingCardSlot';
 import Analytics from '@/lib/analytics';
 import { SettingsModals } from './_components/SettingsModal';
 import { TranscriptPanel } from './_components/TranscriptPanel';
@@ -38,7 +39,7 @@ export default function Home() {
 
   // Hooks
   const { hasMicrophone } = usePermissionCheck();
-  const { setIsMeetingActive, isCollapsed: sidebarCollapsed, refetchMeetings } = useSidebar();
+  const { setIsMeetingActive, refetchMeetings } = useSidebar();
   const { modals, messages, showModal, hideModal } = useModalState(transcriptModelConfig);
   const { isRecordingDisabled, setIsRecordingDisabled } = useRecordingStateSync(isRecording, setIsRecordingState, setIsMeetingActive);
   const { handleRecordingStart } = useRecordingStart(isRecording, setIsRecordingState, showModal);
@@ -224,15 +225,7 @@ export default function Home() {
           status !== RecordingStatus.PROCESSING_TRANSCRIPTS &&
           status !== RecordingStatus.SAVING &&
           status !== RecordingStatus.COMPLETED && (
-            <div className="fixed bottom-12 left-0 right-0 z-30 pointer-events-none">
-              <div
-                className="flex justify-center pl-8 transition-[margin] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none pointer-events-none"
-                style={{
-                  marginLeft: sidebarCollapsed ? '4rem' : '16rem'
-                }}
-              >
-                <div className="flex w-full max-w-[680px] justify-center pointer-events-auto">
-                  <div className="flex items-center">
+            <RecordingCardSlot>
                     <RecordingControls
                       isRecording={recordingState.isRecording}
                       onRecordingStop={(callApi = true) => handleRecordingStop(callApi)}
@@ -248,17 +241,13 @@ export default function Home() {
                       selectedDevices={selectedDevices}
                       meetingName={meetingTitle}
                     />
-                  </div>
-                </div>
-              </div>
-            </div>
+            </RecordingCardSlot>
           )}
 
         {(status === RecordingStatus.PROCESSING_TRANSCRIPTS ||
           status === RecordingStatus.SAVING ||
           status === RecordingStatus.COMPLETED) && (
           <PostCallHandoffCard
-            sidebarCollapsed={sidebarCollapsed}
             busy
             title={
               status === RecordingStatus.SAVING

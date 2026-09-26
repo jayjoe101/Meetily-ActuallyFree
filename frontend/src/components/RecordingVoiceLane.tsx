@@ -139,9 +139,7 @@ export function RecordingVoiceLane({
 
   return (
     <div
-      className={`flex h-9 items-stretch gap-[3px] rounded-full bg-white/[0.06] p-[3px] transition-[flex-grow] ${ease} ${
-        live ? 'min-w-0 flex-1' : 'shrink-0'
-      }`}
+      className={`flex h-9 items-stretch overflow-hidden rounded-full bg-white/[0.06] ${live ? 'min-w-0 flex-1' : 'shrink-0'}`}
     >
       <Tooltip>
         <TooltipTrigger asChild>
@@ -151,8 +149,8 @@ export function RecordingVoiceLane({
             aria-pressed={muted}
             aria-label={muteLabel}
             onClick={() => onMute?.()}
-            className={`flex min-w-0 items-center justify-center rounded-full transition-[flex-grow,padding,background-color,color] ${ease} ${
-              live ? 'flex-1 px-2.5' : 'w-8 shrink-0'
+            className={`flex items-center justify-center transition-[padding,background-color,color] ${ease} ${
+              live ? 'min-w-0 flex-1 px-2.5' : 'w-8 shrink-0'
             } ${
               muted
                 ? 'bg-orange-500/25 text-orange-100 hover:bg-orange-500/35'
@@ -171,8 +169,8 @@ export function RecordingVoiceLane({
                 className={`absolute transition-opacity duration-300 ${muted ? 'opacity-100' : 'opacity-0'}`}
               />
             </span>
-            <span className={`grid h-4 items-center overflow-hidden transition-[grid-template-columns,opacity,margin] ${ease} ${
-              live ? 'ml-2 grid-cols-[1fr] flex-1 opacity-100' : 'ml-0 w-0 grid-cols-[0fr] opacity-0'
+            <span className={`grid h-4 items-center overflow-hidden transition-[width,flex-grow,opacity,margin] ${ease} ${
+              live ? 'ml-2 w-full min-w-0 max-w-24 flex-1 opacity-100' : 'ml-0 w-0 opacity-0'
             }`}>
               <span className="min-w-0 overflow-hidden">
                 <LiveAudioVisualizer active={meterActive} source={kind === 'mic' ? 'mic' : 'system'} bars={18} fill className="w-full" />
@@ -194,7 +192,7 @@ export function RecordingVoiceLane({
                 disabled={disabled || macDefaultOutput}
                 aria-expanded={open}
                 aria-label={settingsLabel}
-                className={`flex w-[22px] shrink-0 items-center justify-center rounded-full transition-colors duration-200 ${
+                className={`flex w-[22px] shrink-0 items-center justify-center transition-colors duration-150 ${
                   open ? 'bg-white/15 text-white' : 'text-white/55 hover:bg-white/10 hover:text-white'
                 } disabled:opacity-40`}
               >

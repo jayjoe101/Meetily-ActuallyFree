@@ -80,14 +80,26 @@ export function SpeakersSidebar({
     setEditingSpeaker(null);
   };
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--af-speakers-width', isOpen ? '20rem' : '0px');
+    return () => {
+      root.style.removeProperty('--af-speakers-width');
+    };
+  }, [isOpen]);
 
   const totalTurns = speakers.reduce((sum, s) => sum + s.segmentCount, 0);
 
   return (
     <>
+      <div
+        className={`flex h-full shrink-0 justify-end overflow-hidden transition-[width] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+          isOpen ? 'w-80' : 'pointer-events-none w-0'
+        }`}
+        aria-hidden={!isOpen}
+      >
       <aside
-        className="w-80 border-l border-[var(--af-border,#e5e7eb)] bg-[var(--af-panel,#ffffff)] flex flex-col h-full shrink-0 shadow-lg transition-all duration-300 z-20"
+        className="flex h-full w-80 shrink-0 flex-col border-l border-[var(--af-border,#e5e7eb)] bg-[var(--af-panel,#ffffff)]"
         aria-label="Detected Speakers Sidebar"
       >
         {/* Header */}
@@ -260,6 +272,7 @@ export function SpeakersSidebar({
           </div>
         </div>
       </aside>
+      </div>
 
       {/* Merge Speaker Modal */}
       <MergeSpeakerDialog

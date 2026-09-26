@@ -14,8 +14,10 @@
             {
                 "title": "Meetily - Actually Free",
                 "url": "/",
-                "width": 1100,
-                "height": 700,
+                "width": 1280,
+                "height": 760,
+                "minWidth": 1140,
+                "minHeight": 700,
                 "center": true,
                 "resizable": true,
                 "fullscreen": false,

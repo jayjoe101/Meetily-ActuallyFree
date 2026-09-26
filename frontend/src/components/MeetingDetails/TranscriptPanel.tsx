@@ -214,12 +214,13 @@ export function TranscriptPanel({
           <button
             type="button"
             onClick={() => setShowSpeakersSidebar((prev) => !prev)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors duration-200 ${
               showSpeakersSidebar
-                ? 'border-blue-400 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold'
-                : 'border-[var(--af-border)] hover:bg-[var(--af-panel-2)] text-[var(--af-text-2)]'
+                ? 'border-[var(--af-accent)] bg-[var(--af-accent-soft)] font-semibold text-[var(--af-accent)]'
+                : 'border-[var(--af-border)] text-[var(--af-text-2)] hover:bg-[var(--af-panel-2)]'
             }`}
-            title="Toggle detected speakers sidebar"
+            title="Speakers"
+            aria-expanded={showSpeakersSidebar}
           >
             <Users size={14} />
             <span>Speakers</span>

@@ -598,7 +598,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
   return (
     <TooltipProvider>
       <div className="flex flex-col space-y-2">
-        <div className={`flex items-center rounded-3xl border border-white/10 bg-[#0f1218]/90 text-white shadow-2xl backdrop-blur-xl transition-[width,padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${isRecording || isProcessing ? 'w-full max-w-[640px] gap-3 px-4 py-3' : 'w-auto gap-4 px-4 py-3'}`}>
+        <div className={`pointer-events-auto flex items-center rounded-3xl border border-white/10 bg-[#0f1218]/90 text-white shadow-2xl backdrop-blur-xl ${isRecording || isProcessing ? 'w-full min-w-0 gap-3 px-4 py-3' : 'w-max gap-4 px-4 py-3'}`}>
           {showPlayback ? (
                 <>
                   <button
@@ -636,8 +636,8 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                 </>
               ) : (
                 <>
-                    <div className="flex w-full items-center gap-4">
-                      <div className="flex items-center gap-3 pl-0.5">
+                    <div className={`flex min-w-0 items-center gap-4 ${isRecording || isProcessing ? 'w-full' : 'w-max'}`}>
+                      <div className="flex shrink-0 items-center gap-3 pl-0.5">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
@@ -683,7 +683,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                           </TooltipContent>
                         </Tooltip>
 
-                        <div className="min-w-[7.75rem] text-left leading-tight">
+                        <div className="min-w-[7.75rem] shrink-0 whitespace-nowrap text-left leading-tight">
                           <div className="text-sm font-semibold tabular-nums tracking-tight text-white">
                             {isRecording
                               ? formatElapsed(elapsedSeconds)
@@ -754,7 +754,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
 
                       <div className="h-8 w-px shrink-0 self-center bg-white/10" />
 
-                      <div className={`flex items-center gap-2 transition-[flex-grow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${isRecording ? 'min-w-0 flex-1' : 'shrink-0'}`}>
+                      <div className={`flex items-center gap-2 ${isRecording ? 'min-w-0 flex-1' : 'shrink-0'}`}>
                         <RecordingVoiceLane
                           kind="mic"
                           open={openLane === 'mic'}

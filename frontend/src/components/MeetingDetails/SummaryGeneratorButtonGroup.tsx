@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Sparkles, Settings, FileText, Check, Square, MoreHorizontal, Languages, Save, Copy } from 'lucide-react';
+import { Sparkles, Settings, FileText, Check, Square } from 'lucide-react';
 import Analytics from '@/lib/analytics';
 import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
@@ -42,13 +42,6 @@ interface SummaryGeneratorButtonGroupProps {
   hasSummary?: boolean;
   isModelConfigLoading?: boolean;
   onOpenModelSettings?: (openFn: () => void) => void;
-  /** When the notes pane is too narrow, secondary actions fold into one menu. */
-  collapsed?: boolean;
-  languageLabel?: string;
-  onOpenLanguage?: () => void;
-  onSaveSummary?: () => void;
-  onCopySummary?: () => void;
-  summarySaving?: boolean;
 }
 
 export function SummaryGeneratorButtonGroup({
@@ -69,12 +62,6 @@ export function SummaryGeneratorButtonGroup({
   isModelConfigLoading = false,
   onOpenModelSettings,
   languageSlot,
-  collapsed = false,
-  languageLabel,
-  onOpenLanguage,
-  onSaveSummary,
-  onCopySummary,
-  summarySaving = false,
 }: SummaryGeneratorButtonGroupProps) {
   const [isCheckingModels, setIsCheckingModels] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
@@ -306,66 +293,10 @@ export function SummaryGeneratorButtonGroup({
         </Button>
       )}
 
-      {!collapsed && languageSlot}
-
-      {collapsed && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="af-settle h-8 w-8 shrink-0 px-0"
-              title="More summary actions"
-              aria-label="More summary actions"
-            >
-              <MoreHorizontal size={15} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            {onOpenLanguage && (
-              <DropdownMenuItem onClick={onOpenLanguage}>
-                <Languages />
-                {languageLabel ? `Language · ${languageLabel}` : 'Language'}
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onClick={() => setSettingsDialogOpen(true)}>
-              <Settings />
-              Summary model
-            </DropdownMenuItem>
-            {availableTemplates.map((template) => (
-              <DropdownMenuItem
-                key={template.id}
-                onClick={() => onTemplateSelect(template.id, template.name)}
-              >
-                <FileText />
-                <span className="min-w-0 flex-1 truncate">{template.name}</span>
-                {selectedTemplate === template.id && <Check className="h-4 w-4 text-[var(--af-accent)]" />}
-              </DropdownMenuItem>
-            ))}
-            {onManageTemplates && (
-              <DropdownMenuItem onClick={onManageTemplates}>
-                Manage templates
-              </DropdownMenuItem>
-            )}
-            {onSaveSummary && (
-              <DropdownMenuItem disabled={summarySaving} onClick={onSaveSummary}>
-                <Save />
-                {summarySaving ? 'Saving…' : 'Save summary'}
-              </DropdownMenuItem>
-            )}
-            {onCopySummary && (
-              <DropdownMenuItem onClick={onCopySummary}>
-                <Copy />
-                Copy summary
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
+      {languageSlot}
 
       {/* Settings button */}
       <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
-        {!collapsed && (
         <DialogTrigger asChild>
           <Button
             variant="outline"
@@ -377,7 +308,6 @@ export function SummaryGeneratorButtonGroup({
             <span className="summary-action-label">AI Model</span>
           </Button>
         </DialogTrigger>
-        )}
         <DialogContent
           aria-describedby={undefined}
         >
@@ -398,7 +328,7 @@ export function SummaryGeneratorButtonGroup({
       </Dialog>
 
       {/* Template selector dropdown */}
-      {!collapsed && (availableTemplates.length > 0 || onManageTemplates) && (
+      {(availableTemplates.length > 0 || onManageTemplates) && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button

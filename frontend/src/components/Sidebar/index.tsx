@@ -108,7 +108,7 @@ function RailIcon({ children }: { children: React.ReactNode }) {
 function RailLabel({ expanded, children }: { expanded: boolean; children: React.ReactNode }) {
   return (
     <span
-      className={`block min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-[max-width,opacity,transform] duration-300 motion-reduce:transition-none ${RAIL_EASE} ${
+      className={`flex min-w-0 flex-1 items-center overflow-hidden whitespace-nowrap text-left transition-[max-width,opacity,transform] duration-300 motion-reduce:transition-none ${RAIL_EASE} ${
         expanded
           ? 'max-w-56 translate-x-0 opacity-100'
           : 'max-w-0 -translate-x-1 opacity-0'
@@ -691,7 +691,6 @@ const Sidebar: React.FC = () => {
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', stop);
   };
-  const isMeetingPage = Boolean(pathname?.includes('/meeting-details'));
   const isSettingsPage = pathname === '/settings';
   const meetingsTitle = sidebarItems.find((item) => item.id === 'meetings')?.title ?? 'Recent Meetings';
   const meetingListRef = useRef<HTMLDivElement>(null);
@@ -776,7 +775,7 @@ const Sidebar: React.FC = () => {
                     if (!expanded) setSidebarWidth(SIDEBAR_DEFAULT);
                   }}
                   aria-label={meetingsTitle}
-                  className={navButtonClass(isMeetingPage)}
+                  className={navButtonClass(false)}
                 >
                   <RailIcon>
                     <NotebookPen className="h-5 w-5" />

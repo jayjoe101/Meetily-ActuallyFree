@@ -119,9 +119,8 @@ export function SummaryPanel({
   const [summaryLang, setSummaryLang] = useState<string | null>(null);
   const [summaryLangStorage, setSummaryLangStorage] = useState<SummaryLanguageStorage>('metadata');
   const [langPickerOpen, setLangPickerOpen] = useState(false);
-  const [toolbarTight, setToolbarTight] = useState(false);
   const toolbarRef = useRef<HTMLDivElement>(null);
-  const toolbarNeededRef = useRef(0);
+  const buttonsRef = useRef<HTMLDivElement>(null);
   const languageLoadVersionRef = useRef(0);
   const activeMeetingIdRef = useRef(meeting.id);
   const languageSaveVersionRef = useRef(0);
@@ -247,20 +246,17 @@ export function SummaryPanel({
   const isSummaryLoading = summaryStatus === 'processing' || summaryStatus === 'summarizing' || summaryStatus === 'regenerating';
 
   useEffect(() => {
-    const el = toolbarRef.current;
-    if (!el) return;
-    const read = () => {
-      setToolbarTight((currently) => {
-        if (!currently) {
-          toolbarNeededRef.current = el.scrollWidth;
-          return el.scrollWidth > el.clientWidth + 1;
-        }
-        return el.clientWidth < toolbarNeededRef.current + 8;
-      });
+    const row = buttonsRef.current;
+    if (!row) return;
+    const publish = () => {
+      const width = Math.ceil(row.getBoundingClientRect().width);
+      if (width <= 0) return;
+      document.documentElement.style.setProperty('--af-notes-min', `${width}px`);
+      window.dispatchEvent(new Event('af-notes-min'));
     };
-    read();
-    const observer = new ResizeObserver(read);
-    observer.observe(el);
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(row);
     return () => observer.disconnect();
   }, [aiSummary, summaryStatus, effectiveLangLabel]);
 
@@ -283,8 +279,8 @@ export function SummaryPanel({
     <div className="summary-actions-container flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-[var(--af-panel)]">
       <Popover open={langPickerOpen} onOpenChange={setLangPickerOpen}>
       <PopoverAnchor asChild>
-      <div ref={toolbarRef} className="summary-toolbar flex h-12 shrink-0 items-center gap-2 overflow-hidden border-b border-[var(--af-border)] bg-[var(--af-panel)] px-3">
-        <div className="flex shrink-0 items-center">
+      <div ref={toolbarRef} className="summary-toolbar flex h-12 shrink-0 items-center overflow-hidden border-b border-[var(--af-border)] bg-[var(--af-panel)]">
+        <div ref={buttonsRef} className="flex h-full w-max items-center gap-1 px-3">
           <SummaryGeneratorButtonGroup
             modelConfig={modelConfig}
             setModelConfig={setModelConfig}
@@ -302,18 +298,11 @@ export function SummaryPanel({
             hasSummary={!!aiSummary}
             isModelConfigLoading={isModelConfigLoading}
             onOpenModelSettings={onOpenModelSettings}
-            languageSlot={toolbarTight ? undefined : languageSlot}
-            collapsed={toolbarTight}
-            languageLabel={effectiveLangLabel}
-            onOpenLanguage={() => setLangPickerOpen(true)}
-            onSaveSummary={aiSummary ? onSaveAll : undefined}
-            onCopySummary={aiSummary ? onCopySummary : undefined}
-            summarySaving={isSaving}
+            languageSlot={languageSlot}
           />
-        </div>
 
-        {aiSummary && !toolbarTight && (
-          <div className="ml-auto flex shrink-0 items-center">
+        {aiSummary && (
+          <div className="flex shrink-0 items-center">
             <SummaryUpdaterButtonGroup
               isSaving={isSaving}
               isDirty={isTitleDirty || (summaryRef.current?.isDirty || false)}
@@ -324,6 +313,7 @@ export function SummaryPanel({
             />
           </div>
         )}
+        </div>
       </div>
       </PopoverAnchor>
       <PopoverContent

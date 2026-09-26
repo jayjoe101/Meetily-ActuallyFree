@@ -26,14 +26,19 @@ import { SummaryRegenerationDialog } from '@/components/MeetingDetails/SummaryRe
 // persisted in sessionStorage below; failed preflight attempts remain retryable.
 const autoSummaryInFlight = new Map<string, Promise<boolean>>();
 const NOTES_WIDTH_KEY = 'af-meeting-notes-width';
-const NOTES_MIN = 320;
 const TRANSCRIPT_MIN = 300;
+
+/** Width of the summary header once its buttons are laid out with their gaps. */
+function notesFloor() {
+  if (typeof document === 'undefined') return 420;
+  const measured = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--af-notes-min'));
+  return Number.isFinite(measured) && measured > 0 ? measured : 420;
+}
 
 function clampNotesWidth(width: number, frame: number) {
   const available = Math.max(0, frame - 6);
-  const notesMin = Math.min(NOTES_MIN, Math.max(180, available * 0.34));
-  const transcriptMin = Math.min(TRANSCRIPT_MIN, Math.max(180, available - notesMin));
-  const max = Math.max(notesMin, available - transcriptMin);
+  const notesMin = notesFloor();
+  const max = Math.max(notesMin, available - TRANSCRIPT_MIN);
   return Math.round(Math.min(max, Math.max(notesMin, width)));
 }
 
@@ -207,7 +212,11 @@ export default function PageContent({
       setNotesWidth((current) => clampNotesWidth(current, frame));
     };
     window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    window.addEventListener('af-notes-min', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('af-notes-min', onResize);
+    };
   }, []);
 
   const startSplitDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -341,7 +350,7 @@ export default function PageContent({
             role="separator"
             aria-orientation="vertical"
             aria-label="Resize transcript and notes"
-            aria-valuemin={NOTES_MIN}
+            aria-valuemin={notesFloor()}
             aria-valuenow={notesWidth}
             onPointerDown={startSplitDrag}
             className="group relative z-10 w-1.5 shrink-0 cursor-col-resize"
@@ -351,7 +360,7 @@ export default function PageContent({
         )}
         <div
           className={stacked ? 'flex min-h-0 min-w-0 flex-1 flex-col border-t border-[var(--af-border)]' : 'flex h-full shrink-0 flex-col'}
-          style={stacked ? undefined : { width: notesWidth }}
+          style={stacked ? undefined : { width: notesWidth, minWidth: 'var(--af-notes-min, 420px)' }}
         >
         <SummaryPanel
           meeting={meeting}

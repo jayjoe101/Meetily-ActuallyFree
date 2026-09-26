@@ -1,10 +1,9 @@
 'use client'
 
 import './globals.css'
+import dynamic from 'next/dynamic'
 import { Inter } from 'next/font/google'
-import Sidebar from '@/components/Sidebar'
 import { SidebarProvider } from '@/components/Sidebar/SidebarProvider'
-import MainContent from '@/components/MainContent'
 import AnalyticsProvider from '@/components/AnalyticsProvider'
 import { Toaster, toast } from 'sonner'
 import { X } from 'lucide-react'
@@ -20,18 +19,78 @@ import { OllamaDownloadProvider } from '@/contexts/OllamaDownloadContext'
 import { TranscriptProvider } from '@/contexts/TranscriptContext'
 import { ConfigProvider, useConfig } from '@/contexts/ConfigContext'
 import { OnboardingProvider } from '@/contexts/OnboardingContext'
-import { OnboardingFlow } from '@/components/onboarding'
 import { loadBetaFeatures } from '@/types/betaFeatures'
 import { DownloadProgressToastProvider } from '@/components/shared/DownloadProgressToast'
 import { UpdateCheckProvider } from '@/components/UpdateCheckProvider'
 import { RecordingPostProcessingProvider } from '@/contexts/RecordingPostProcessingProvider'
-import { ImportAudioDialog, ImportDropOverlay } from '@/components/ImportAudio'
 import { ImportDialogProvider } from '@/contexts/ImportDialogContext'
 import { isAudioExtension, getAudioFormatsDisplayList } from '@/constants/audioFormats'
-import GlobalSearchDialog from '@/components/GlobalSearchDialog'
-import CrashReportDialog from '@/components/CrashReportDialog'
 import { getPendingCrashReport, type PendingCrashReport } from '@/services/crashReportService'
 
+// Dynamically import heavy dialogs and onboarding wizard so app/layout.js stays lightweight
+// and cold-compiles quickly without timing out on slow startup or high CPU load.
+const OnboardingFlow = dynamic(
+  () => import('@/components/onboarding').then((mod) => mod.OnboardingFlow),
+  { ssr: false }
+)
+const ImportAudioDialog = dynamic(
+  () => import('@/components/ImportAudio').then((mod) => mod.ImportAudioDialog),
+  { ssr: false }
+)
+const ImportDropOverlay = dynamic(
+  () => import('@/components/ImportAudio').then((mod) => mod.ImportDropOverlay),
+  { ssr: false }
+)
+const GlobalSearchDialog = dynamic(
+  () => import('@/components/GlobalSearchDialog'),
+  { ssr: false }
+)
+const CrashReportDialog = dynamic(
+  () => import('@/components/CrashReportDialog'),
+  { ssr: false }
+)
+
+const Sidebar = dynamic(
+  () => import('@/components/Sidebar'),
+  { ssr: false }
+)
+const MainContent = dynamic(
+  () => import('@/components/MainContent'),
+  { ssr: false }
+)
+
+// Early inline handler executed in <head> before chunk scripts evaluate.
+// Catches ChunkLoadError (such as on-demand compilation delay on cold launch)
+// and reloads the window after a brief pause so pre-compiled chunks load instantly.
+const inlineChunkErrorHandler = `
+(function() {
+  var RELOAD_KEY = 'meetily_chunk_reload';
+  function handleChunkError(e) {
+    try {
+      var msg = (e && e.message) || (e && e.reason && e.reason.message) || '';
+      var name = (e && e.name) || (e && e.reason && e.reason.name) || '';
+      var isChunkError = name === 'ChunkLoadError' ||
+        /loading chunk .* failed/i.test(msg) ||
+        /timeout: .*_next\\/static/i.test(msg) ||
+        /failed to fetch .*_next\\/static/i.test(msg);
+
+      if (isChunkError) {
+        var last = sessionStorage.getItem(RELOAD_KEY);
+        var now = Date.now();
+        if (!last || (now - parseInt(last, 10)) > 3000) {
+          sessionStorage.setItem(RELOAD_KEY, String(now));
+          console.warn('[Meetily] ChunkLoadError detected in WebView2. Reloading in 300ms...');
+          setTimeout(function() {
+            window.location.reload();
+          }, 300);
+        }
+      }
+    } catch (_) {}
+  }
+  window.addEventListener('error', handleChunkError, true);
+  window.addEventListener('unhandledrejection', handleChunkError, true);
+})();
+`;
 
 const inter = Inter({
   subsets: ['latin'],
@@ -110,11 +169,18 @@ export default function RootLayout({
         setShowOnboarding(!isComplete)
 
         if (isComplete) {
-          const report = await getPendingCrashReport()
-          if (!cancelled) setPendingCrashReport(report)
+          try {
+            const report = await getPendingCrashReport()
+            if (!cancelled) setPendingCrashReport(report)
+          } catch (error) {
+            console.warn('[Layout] Crash report check failed:', error)
+          }
         }
       } catch (error) {
-        console.error('[Layout] Failed to resolve startup state:', error)
+        console.warn('[Layout] Could not resolve Tauri startup state, defaulting to main app:', error)
+        if (cancelled) return
+        setOnboardingCompleted(true)
+        setShowOnboarding(false)
       }
     }
 
@@ -340,6 +406,9 @@ export default function RootLayout({
   if (isMinibar) {
     return (
       <html lang="en" className={`dark minibar-window ${inter.variable} ${inter.className}`}>
+        <head>
+          <script dangerouslySetInnerHTML={{ __html: inlineChunkErrorHandler }} />
+        </head>
         <body className="font-sans antialiased bg-transparent">
           {children}
         </body>
@@ -349,6 +418,9 @@ export default function RootLayout({
 
   return (
     <html lang="en" className={`dark ${inter.variable} ${inter.className}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: inlineChunkErrorHandler }} />
+      </head>
       <body className="font-sans antialiased">
         {pendingCrashReport ? (
           <>
@@ -390,6 +462,13 @@ export default function RootLayout({
                                   handleImportDialogClose={handleImportDialogClose}
                                   importFilePath={importFilePath}
                                 />
+                                {/* Non-blocking crash report overlay */}
+                                {pendingCrashReport && (
+                                  <CrashReportDialog
+                                    report={pendingCrashReport}
+                                    onResolved={() => setPendingCrashReport(null)}
+                                  />
+                                )}
                               </ImportDialogProvider>
                             </UpdateCheckProvider>
                           </RecordingPostProcessingProvider>

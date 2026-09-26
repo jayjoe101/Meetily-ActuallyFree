@@ -31,7 +31,7 @@ interface SidebarContextType {
   sidebarItems: SidebarItem[];
   isCollapsed: boolean;
   sidebarWidth: number;
-  setSidebarWidth: (width: number) => void;
+  setSidebarWidth: (width: number, origin?: number) => void;
   previewSidebar: (width: number) => void;
   meetings: CurrentMeeting[];
   setMeetings: (meetings: CurrentMeeting[]) => void;
@@ -144,9 +144,9 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   ];
 
 
-  const setSidebarWidth = (width: number) => {
+  const setSidebarWidth = (width: number, origin?: number) => {
     setDragWidth(null);
-    setPreferredWidth(snapSidebarWidth(width, windowWidth));
+    setPreferredWidth(snapSidebarWidth(width, windowWidth, origin));
   };
 
   const previewSidebar = (width: number) => {

@@ -91,9 +91,9 @@ export function TranscriptPanel({
 
   return (
     <div className="flex flex-1 overflow-hidden w-full h-full">
-      <div ref={transcriptContainerRef} className="flex-1 border-r border-gray-200 bg-white flex flex-col overflow-y-auto">
+      <div ref={transcriptContainerRef} className="flex-1 border-r border-gray-200 bg-[var(--af-panel)] flex flex-col overflow-y-auto">
         {/* Title area - Sticky header */}
-        <div className="sticky top-0 z-10 bg-white p-4 border-gray-200">
+        <div className="sticky top-0 z-10 bg-[var(--af-panel)] p-4 border-gray-200">
           <div className="flex flex-col space-y-3">
             <div className="flex flex-col space-y-2">
               <div className="flex justify-center items-center space-x-2">

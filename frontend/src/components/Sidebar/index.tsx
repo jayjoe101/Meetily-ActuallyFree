@@ -688,7 +688,7 @@ const Sidebar: React.FC = () => {
       requestAnimationFrame(() => {
         document.documentElement.removeAttribute('data-sidebar-drag');
         setDragging(false);
-        setSidebarWidth(next);
+        setSidebarWidth(next, originWidth);
       });
     };
     window.addEventListener('pointermove', move);

@@ -195,7 +195,7 @@ export default function Home() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="flex flex-col h-screen bg-gray-50"
+      className="flex flex-col h-screen bg-[var(--af-panel)]"
     >
       {/* All Modals supported*/}
       <SettingsModals

@@ -32,11 +32,30 @@ export function previewSidebarWidth(next: number, windowWidth = typeof window ==
   return Math.round(Math.max(SIDEBAR_MIN, Math.min(ceiling, next)));
 }
 
-/** Flick left snaps shut. Anything open is at least the default width, then up to the window's cap. */
-export function snapSidebarWidth(next: number, windowWidth = typeof window === 'undefined' ? 1280 : window.innerWidth) {
+/** Pointer travel that counts as a flick between fully shut and the default width. */
+const SIDEBAR_FLICK = 36;
+
+/**
+ * A short pull from shut snaps open to the default. A short pull toward shut
+ * snaps fully minimized. Wider than the default is kept, up to the window cap.
+ * `origin` is the width where the drag started; without it, only the release
+ * width is used (programmatic opens pass the default and stay open).
+ */
+export function snapSidebarWidth(
+  next: number,
+  windowWidth = typeof window === 'undefined' ? 1280 : window.innerWidth,
+  origin?: number,
+) {
   const ceiling = Math.min(SIDEBAR_ABSOLUTE_MAX, maxSidebarFit(windowWidth));
   if (ceiling < SIDEBAR_DEFAULT) return SIDEBAR_MIN;
-  if (next < SIDEBAR_DEFAULT - 36) return SIDEBAR_MIN;
+
+  const fromShut = origin != null && origin <= SIDEBAR_MIN + 8;
+  if (fromShut) {
+    if (next < SIDEBAR_MIN + SIDEBAR_FLICK) return SIDEBAR_MIN;
+    return Math.round(Math.min(ceiling, Math.max(SIDEBAR_DEFAULT, next)));
+  }
+
+  if (next < SIDEBAR_DEFAULT - SIDEBAR_FLICK) return SIDEBAR_MIN;
   return Math.round(Math.min(ceiling, Math.max(SIDEBAR_DEFAULT, next)));
 }
 

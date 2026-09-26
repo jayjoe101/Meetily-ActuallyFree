@@ -13,6 +13,7 @@ import { usePathname } from 'next/navigation'
 import { listen, UnlistenFn } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { applyAppTheme, getSavedAppTheme } from '@/lib/app-theme'
+import { COMPACT_MIN_WIDTH } from '@/hooks/useCompactChrome'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { RecordingStateProvider } from '@/contexts/RecordingStateContext'
 import { OllamaDownloadProvider } from '@/contexts/OllamaDownloadContext'
@@ -163,15 +164,12 @@ export default function RootLayout({
       try {
         const { getCurrentWindow, LogicalSize } = await import('@tauri-apps/api/window')
         const win = getCurrentWindow()
-        // Shrunk live card: buttons, label, and padding stay; the meters can close.
-        // 16rem rail + 3.5rem collapse shadow + ~30.5rem card + 1.25rem gap + 20rem speakers.
-        const minWidth = 16 * 16 + 3.5 * 16 + 30.5 * 16 + 1.25 * 16 + 20 * 16
-        const min = new LogicalSize(minWidth, 700)
+        const min = new LogicalSize(COMPACT_MIN_WIDTH, 1)
         await win.setMinSize(min)
         const factor = await win.scaleFactor()
         const size = (await win.innerSize()).toLogical(factor)
-        if (cancelled || size.width >= minWidth) return
-        await win.setSize(new LogicalSize(minWidth, Math.max(700, size.height)))
+        if (cancelled || size.width >= COMPACT_MIN_WIDTH) return
+        await win.setSize(new LogicalSize(COMPACT_MIN_WIDTH, size.height))
       } catch {
         // Browser preview, or the desktop window is not available yet.
       }

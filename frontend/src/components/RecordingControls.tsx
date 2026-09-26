@@ -637,7 +637,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
               ) : (
                 <>
                     <div className={`flex min-w-0 items-center gap-4 ${isRecording || isProcessing ? 'w-full' : 'w-max'}`}>
-                      <div className="flex shrink-0 items-center gap-3 pl-0.5">
+                      <div className="flex shrink-0 items-center pl-0.5">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
@@ -683,7 +683,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                           </TooltipContent>
                         </Tooltip>
 
-                        <div className="min-w-[7.75rem] shrink-0 whitespace-nowrap text-left leading-tight">
+                        <div className={`ml-3 shrink-0 whitespace-nowrap text-left leading-tight ${isRecording ? 'w-[5.25rem]' : 'min-w-[7.75rem]'}`}>
                           <div className="text-sm font-semibold tabular-nums tracking-tight text-white">
                             {isRecording
                               ? formatElapsed(elapsedSeconds)
@@ -703,8 +703,8 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                         </div>
 
                         <div
-                          className={`grid overflow-hidden transition-[grid-template-columns,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
-                            isRecording ? 'grid-cols-[1fr] opacity-100' : 'pointer-events-none grid-cols-[0fr] opacity-0'
+                          className={`grid overflow-hidden transition-[grid-template-columns,opacity,margin] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+                            isRecording ? 'ml-2 grid-cols-[1fr] opacity-100' : 'pointer-events-none ml-0 grid-cols-[0fr] opacity-0'
                           }`}
                         >
                           <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">

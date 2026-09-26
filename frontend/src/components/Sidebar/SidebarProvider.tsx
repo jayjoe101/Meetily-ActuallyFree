@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import Analytics from '@/lib/analytics';
 import { invoke } from '@tauri-apps/api/core';
 import { useRecordingState } from '@/contexts/RecordingStateContext';
+import { displayedSidebarWidth, previewSidebarWidth, SIDEBAR_DEFAULT, SIDEBAR_MIN, snapSidebarWidth } from '@/hooks/useCompactChrome';
 
 
 interface SidebarItem {
@@ -29,7 +30,9 @@ interface SidebarContextType {
   setCurrentMeeting: (meeting: CurrentMeeting | null) => void;
   sidebarItems: SidebarItem[];
   isCollapsed: boolean;
-  toggleCollapse: () => void;
+  sidebarWidth: number;
+  setSidebarWidth: (width: number) => void;
+  previewSidebar: (width: number) => void;
   meetings: CurrentMeeting[];
   setMeetings: (meetings: CurrentMeeting[]) => void;
   isMeetingActive: boolean;
@@ -60,7 +63,11 @@ export const useSidebar = () => {
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [currentMeeting, setCurrentMeeting] = useState<CurrentMeeting | null>({ id: 'intro-call', title: '+ New Call' });
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [preferredWidth, setPreferredWidth] = useState(SIDEBAR_DEFAULT);
+  const [dragWidth, setDragWidth] = useState<number | null>(null);
+  const [windowWidth, setWindowWidth] = useState(1600);
+  const sidebarWidth = dragWidth ?? displayedSidebarWidth(preferredWidth, windowWidth);
+  const isCollapsed = sidebarWidth <= SIDEBAR_MIN + 8;
   const [meetings, setMeetings] = useState<CurrentMeeting[]>([]);
   const [sidebarItems, setSidebarItems] = useState<SidebarItem[]>([]);
   const [isMeetingActive, setIsMeetingActive] = useState(false);
@@ -137,9 +144,29 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   ];
 
 
-  const toggleCollapse = () => {
-    setIsCollapsed(!isCollapsed);
+  const setSidebarWidth = (width: number) => {
+    setDragWidth(null);
+    setPreferredWidth(snapSidebarWidth(width, windowWidth));
   };
+
+  const previewSidebar = (width: number) => {
+    setDragWidth(previewSidebarWidth(width, windowWidth));
+  };
+
+  useEffect(() => {
+    const read = () => setWindowWidth(window.innerWidth);
+    read();
+    window.addEventListener('resize', read);
+    return () => window.removeEventListener('resize', read);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--af-sidebar-width', `${sidebarWidth}px`);
+    window.dispatchEvent(new Event('af-sidebar-width'));
+    return () => {
+      document.documentElement.style.removeProperty('--af-sidebar-width');
+    };
+  }, [sidebarWidth]);
 
   // Update current meeting when on home page
   useEffect(() => {
@@ -300,7 +327,9 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
       setCurrentMeeting,
       sidebarItems,
       isCollapsed,
-      toggleCollapse,
+      sidebarWidth,
+      setSidebarWidth,
+      previewSidebar,
       meetings,
       setMeetings,
       isMeetingActive,

@@ -20,7 +20,7 @@
  */
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronRight, FileText, AudioLines, ArrowRight, Settings, ChevronLeftCircle, Calendar, Trash2, Mic, Square, Plus, Search, Pencil, NotebookPen, Upload } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, AudioLines, ArrowRight, Settings, Calendar, Trash2, Mic, Square, Plus, Search, Pencil, NotebookPen, Upload } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSidebar } from './SidebarProvider';
 import type { CurrentMeeting } from '@/components/Sidebar/SidebarProvider';
@@ -28,6 +28,7 @@ import { ConfirmationModal } from '../ConfirmationModel/confirmation-modal';
 import { ModelConfig } from '@/components/ModelSettingsModal';
 import { TranscriptModelProps } from '@/components/TranscriptSettings';
 import Analytics from '@/lib/analytics';
+import { SIDEBAR_DEFAULT } from '@/hooks/useCompactChrome';
 import { invoke } from '@tauri-apps/api/core';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
@@ -146,7 +147,9 @@ const Sidebar: React.FC = () => {
     setCurrentMeeting,
     sidebarItems,
     isCollapsed,
-    toggleCollapse,
+    sidebarWidth,
+    setSidebarWidth,
+    previewSidebar,
     handleRecordingToggle,
     meetings,
     setMeetings,
@@ -667,13 +670,30 @@ const Sidebar: React.FC = () => {
   };
 
   const expanded = !isCollapsed;
+  const [dragging, setDragging] = useState(false);
 
-  useEffect(() => {
-    document.documentElement.style.setProperty('--af-sidebar-width', expanded ? '16rem' : '4rem');
-    return () => {
-      document.documentElement.style.removeProperty('--af-sidebar-width');
+  const startResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const originX = event.clientX;
+    const originWidth = sidebarWidth;
+    setDragging(true);
+    document.documentElement.setAttribute('data-sidebar-drag', '');
+    const move = (moveEvent: PointerEvent) => {
+      previewSidebar(originWidth + (moveEvent.clientX - originX));
     };
-  }, [expanded]);
+    const stop = (endEvent: PointerEvent) => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+      const next = originWidth + (endEvent.clientX - originX);
+      requestAnimationFrame(() => {
+        document.documentElement.removeAttribute('data-sidebar-drag');
+        setDragging(false);
+        setSidebarWidth(next);
+      });
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', stop);
+  };
   const isMeetingPage = Boolean(pathname?.includes('/meeting-details'));
   const isSettingsPage = pathname === '/settings';
   const meetingsTitle = sidebarItems.find((item) => item.id === 'meetings')?.title ?? 'Recent Meetings';
@@ -691,20 +711,24 @@ const Sidebar: React.FC = () => {
     }`;
 
   return (
-    <div className="fixed top-0 left-0 z-40 h-screen">
+    <div
+      className={`af-rail fixed top-0 left-0 z-20 h-screen overflow-hidden ${dragging ? '' : 'transition-[width] duration-300 ease-[cubic-bezier(0.22,1.25,0.36,1)] motion-reduce:transition-none'}`}
+      style={{ width: sidebarWidth }}
+    >
       <TooltipProvider>
-        <div className={`relative h-full transition-[width] duration-300 motion-reduce:transition-none ${RAIL_EASE} ${expanded ? 'w-64' : 'w-16'}`}>
-          <button
-            type="button"
-            onClick={toggleCollapse}
-            aria-label={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
-            aria-expanded={expanded}
-            className="absolute left-full top-20 z-50 ml-2 rounded-full border border-[var(--af-border)] bg-[var(--af-panel)] p-1 text-[var(--af-text)] shadow-lg transition-colors hover:bg-[var(--af-hover)]"
-          >
-            <ChevronLeftCircle className={`h-6 w-6 transition-transform duration-300 motion-reduce:transition-none ${RAIL_EASE} ${expanded ? '' : 'rotate-180'}`} />
-          </button>
+        <div className="relative h-full w-full overflow-hidden">
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize sidebar"
+            aria-valuemin={64}
+            aria-valuemax={256}
+            aria-valuenow={sidebarWidth}
+            onPointerDown={startResize}
+            className="absolute inset-y-0 right-0 z-10 w-1.5 cursor-col-resize"
+          />
 
-          <div className="flex h-full flex-col overflow-hidden border-r border-[var(--af-border)] bg-white shadow-sm">
+          <div className="flex h-full w-full min-w-0 flex-col overflow-hidden bg-[var(--af-panel)] shadow-none">
             <div className="flex shrink-0 flex-col gap-3 px-3 pt-4">
               <Logo expanded={expanded} />
 
@@ -752,7 +776,7 @@ const Sidebar: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    if (!expanded) toggleCollapse();
+                    if (!expanded) setSidebarWidth(SIDEBAR_DEFAULT);
                   }}
                   aria-label={meetingsTitle}
                   className={navButtonClass(isMeetingPage)}

@@ -367,6 +367,19 @@ html.dark {
 
 html, body { background-color: var(--af-bg); color: var(--af-text); }
 
+html[data-sidebar-drag] main,
+html[data-sidebar-drag] .af-recording-slot,
+html[data-sidebar-drag] .af-rail,
+html[data-sidebar-drag] .af-rail > * {
+  transition: none !important;
+}
+
+.af-rail {
+  background: var(--af-panel);
+  box-shadow: none !important;
+  border-right: 1px solid var(--af-border);
+}
+
 .af-spinner {
   animation: af-spin 0.7s linear infinite;
 }

@@ -24,6 +24,7 @@ import {
 } from '@/utils/speakerUtils';
 import { MergeSpeakerDialog } from './MergeSpeakerDialog';
 import { DetectedSpeaker } from '@/types';
+import { useChromeFit } from '@/hooks/useCompactChrome';
 
 interface SpeakersSidebarProps {
   speakers: DetectedSpeaker[];
@@ -51,6 +52,8 @@ export function SpeakersSidebar({
 
   // Merge modal state
   const [mergeSource, setMergeSource] = useState<string | null>(null);
+  const { speakersCondensed: compact } = useChromeFit();
+  const panelWidth = compact ? 'w-44' : 'w-80';
 
   // Focus input when editing starts
   useEffect(() => {
@@ -82,11 +85,11 @@ export function SpeakersSidebar({
 
   useEffect(() => {
     const root = document.documentElement;
-    root.style.setProperty('--af-speakers-width', isOpen ? '20rem' : '0px');
+    root.style.setProperty('--af-speakers-width', isOpen ? (compact ? '11rem' : '20rem') : '0px');
     return () => {
       root.style.removeProperty('--af-speakers-width');
     };
-  }, [isOpen]);
+  }, [isOpen, compact]);
 
   const totalTurns = speakers.reduce((sum, s) => sum + s.segmentCount, 0);
 
@@ -94,20 +97,20 @@ export function SpeakersSidebar({
     <>
       <div
         className={`flex h-full shrink-0 justify-end overflow-hidden transition-[width] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
-          isOpen ? 'w-80' : 'pointer-events-none w-0'
+          isOpen ? panelWidth : 'pointer-events-none w-0'
         }`}
         aria-hidden={!isOpen}
       >
       <aside
-        className="flex h-full w-80 shrink-0 flex-col border-l border-[var(--af-border,#e5e7eb)] bg-[var(--af-panel,#ffffff)]"
+        className={`flex h-full shrink-0 flex-col border-l border-[var(--af-border,#e5e7eb)] bg-[var(--af-panel,#ffffff)] ${panelWidth}`}
         aria-label="Detected Speakers Sidebar"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--af-border,#e5e7eb)]">
-          <div className="flex items-center gap-2">
-            <Users size={18} className="text-blue-500" />
-            <span className="font-semibold text-sm text-[var(--af-text,#111827)]">
-              Detected Speakers
+        <div className={`flex items-center justify-between border-b border-[var(--af-border,#e5e7eb)] ${compact ? 'px-2 py-2' : 'px-4 py-3.5'}`}>
+          <div className="flex min-w-0 items-center gap-2">
+            <Users size={18} className="shrink-0 text-blue-500" />
+            <span className={`truncate font-semibold text-[var(--af-text,#111827)] ${compact ? 'text-xs' : 'text-sm'}`}>
+              {compact ? 'Speakers' : 'Detected Speakers'}
             </span>
             <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400">
               {speakers.length}
@@ -126,14 +129,14 @@ export function SpeakersSidebar({
 
         {/* Live Call Active Banner */}
         {isRecording && (
-          <div className="px-4 py-2 bg-blue-500/5 border-b border-blue-500/15 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
-            <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-            <span>Listening & recognizing voices live</span>
+          <div className={`flex items-center gap-2 border-b border-blue-500/15 bg-blue-500/5 text-xs text-blue-600 dark:text-blue-400 ${compact ? 'px-2 py-1.5' : 'px-4 py-2'}`}>
+            <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500 animate-pulse" />
+            <span className="truncate">{compact ? 'Live' : 'Listening & recognizing voices live'}</span>
           </div>
         )}
 
         {/* Speaker List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className={`flex-1 overflow-y-auto ${compact ? 'space-y-2 p-2' : 'space-y-3 p-4'}`}>
           {speakers.length === 0 ? (
             <div className="text-center py-12 px-2 text-[var(--af-text-3,#6b7280)]">
               <Users size={32} className="mx-auto mb-2 opacity-40" />
@@ -152,7 +155,7 @@ export function SpeakersSidebar({
               return (
                 <div
                   key={s.id || s.name}
-                  className={`group relative rounded-xl border p-3 transition-all duration-150 ${
+                  className={`group relative rounded-xl border transition-all duration-150 ${compact ? 'p-2' : 'p-3'} ${
                     isYou
                       ? 'border-blue-500/30 bg-blue-500/5 hover:border-blue-500/50'
                       : 'border-[var(--af-border,#e5e7eb)] bg-[var(--af-panel-2,#f9fafb)] hover:border-gray-400/50 dark:hover:border-gray-600'
@@ -208,6 +211,7 @@ export function SpeakersSidebar({
                             />
                           </button>
 
+                          {!compact && (
                           <div className="flex items-center gap-2 mt-1 text-[11px] text-[var(--af-text-3,#6b7280)]">
                             <span>
                               {s.segmentCount} {s.segmentCount === 1 ? 'turn' : 'turns'}
@@ -215,6 +219,7 @@ export function SpeakersSidebar({
                             <span>•</span>
                             <span>{percentage}%</span>
                           </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -263,6 +268,7 @@ export function SpeakersSidebar({
         </div>
 
         {/* Footer info tip */}
+        {!compact && (
         <div className="p-3 border-t border-[var(--af-border,#e5e7eb)] bg-[var(--af-panel-2,#f9fafb)]">
           <div className="flex items-start gap-2 text-[11px] text-[var(--af-text-3,#6b7280)]">
             <Info size={14} className="shrink-0 mt-0.5 text-blue-500" />
@@ -271,6 +277,7 @@ export function SpeakersSidebar({
             </p>
           </div>
         </div>
+        )}
       </aside>
       </div>
 

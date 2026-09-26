@@ -384,6 +384,76 @@ html, body { background-color: var(--af-bg); color: var(--af-text); }
   background: color-mix(in srgb, var(--af-record) 62%, white);
 }
 
+.af-volume {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 18px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.af-volume::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--af-accent) var(--fill, 0%), var(--af-border) var(--fill, 0%));
+}
+
+.af-volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 14px;
+  width: 14px;
+  margin-top: -5px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.dark input[type='range'].af-volume {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0;
+  height: 18px;
+}
+
+.af-volume::-moz-range-track {
+  height: 4px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--af-border);
+}
+
+.af-volume::-moz-range-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--af-accent);
+}
+
+.af-volume::-moz-range-thumb {
+  height: 14px;
+  width: 14px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+}
+
+@keyframes af-name-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-1 * var(--af-shift, 0px))); }
+}
+
+.af-name-scroll {
+  animation-name: af-name-scroll;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-direction: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .af-name-scroll { animation: none !important; }
+}
+
 @keyframes af-spin {
   to { transform: rotate(360deg); }
 }

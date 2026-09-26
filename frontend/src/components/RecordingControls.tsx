@@ -33,7 +33,7 @@ import { useRecordingState } from '@/contexts/RecordingStateContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import { usePlatform } from '@/hooks/usePlatform';
 import { toast } from 'sonner';
-import { UNAVAILABLE_DEVICE_VALUE, type AudioDeviceOption } from '@/lib/audio-devices';
+import { deviceDisplayName, UNAVAILABLE_DEVICE_VALUE, type AudioDeviceOption } from '@/lib/audio-devices';
 import type { RecordingPreferences } from '@/components/RecordingSettings';
 import type { SelectedDevices } from '@/components/DeviceSelection';
 import { RecordingVoiceLane } from '@/components/RecordingVoiceLane';
@@ -87,6 +87,10 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
   const [micGain, setMicGain] = useState(1);
   const [systemGain, setSystemGain] = useState(1);
   const saveChain = useRef(Promise.resolve());
+  const gainTimer = useRef<number | null>(null);
+  const pendingGain = useRef<{ which: 'mic' | 'system'; value: number } | null>(null);
+  const [idleMicMuted, setIdleMicMuted] = useState(false);
+  const [idleSystemMuted, setIdleSystemMuted] = useState(false);
 
   const inputDevices = audioDevices.filter((device) => device.device_type === 'Input');
   const outputDevices = audioDevices.filter((device) => device.device_type === 'Output');
@@ -131,17 +135,18 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
     });
   }, [setSelectedDevices]);
 
-  const saveGain = useCallback((which: 'mic' | 'system', value: number) => {
-    const next = Math.min(3, Math.max(0.5, value));
-    if (which === 'mic') setMicGain(next);
-    else setSystemGain(next);
+  const flushGain = useCallback(() => {
+    const pending = pendingGain.current;
+    if (!pending) return;
+    pendingGain.current = null;
+    const { which, value } = pending;
     saveChain.current = saveChain.current.then(async () => {
       const prefs = await invoke<RecordingPreferences>('get_recording_preferences');
       await invoke('set_recording_preferences', {
         preferences: {
           ...prefs,
-          mic_gain: which === 'mic' ? next : prefs.mic_gain,
-          system_gain: which === 'system' ? next : prefs.system_gain,
+          mic_gain: which === 'mic' ? value : prefs.mic_gain,
+          system_gain: which === 'system' ? value : prefs.system_gain,
         },
       });
     }).catch((error) => {
@@ -150,18 +155,57 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
     });
   }, []);
 
+  const scheduleGain = useCallback((which: 'mic' | 'system', raw: number, immediate: boolean) => {
+    const value = Math.min(3, Math.max(0.5, raw));
+    if (which === 'mic') setMicGain(value);
+    else setSystemGain(value);
+    pendingGain.current = { which, value };
+    if (gainTimer.current !== null) window.clearTimeout(gainTimer.current);
+    if (immediate) flushGain();
+    else gainTimer.current = window.setTimeout(flushGain, 90);
+  }, [flushGain]);
+
+  const applyLiveDevice = (kind: 'Microphone' | 'SystemAudio', value: string, previous: SelectedDevices, next: SelectedDevices) => {
+    saveDevices(next);
+    if (!isRecording || value === 'default') return;
+    void invoke<boolean>('attempt_device_reconnect', {
+      deviceName: deviceDisplayName(value),
+      deviceType: kind,
+    }).then((ok) => {
+      if (ok) return;
+      toast.error(kind === 'Microphone' ? 'Could not switch microphone' : 'Could not switch system audio', {
+        description: 'The recording is still using the previous device.',
+      });
+      saveDevices(previous);
+    }).catch((error) => {
+      console.error('Failed to switch audio device while recording:', error);
+      toast.error(kind === 'Microphone' ? 'Could not switch microphone' : 'Could not switch system audio', {
+        description: error instanceof Error ? error.message : String(error),
+      });
+      saveDevices(previous);
+    });
+  };
+
   const chooseMic = (value: string) => {
     if (value === UNAVAILABLE_DEVICE_VALUE) return;
-    saveDevices({
-      micDevice: value === 'default' ? null : value,
+    const previous: SelectedDevices = {
+      micDevice: activeDevices?.micDevice ?? null,
       systemDevice: activeDevices?.systemDevice ?? null,
+    };
+    applyLiveDevice('Microphone', value, previous, {
+      micDevice: value === 'default' ? null : value,
+      systemDevice: previous.systemDevice,
     });
   };
 
   const chooseSystem = (value: string) => {
     if (value === UNAVAILABLE_DEVICE_VALUE || isMacOS) return;
-    saveDevices({
+    const previous: SelectedDevices = {
       micDevice: activeDevices?.micDevice ?? null,
+      systemDevice: activeDevices?.systemDevice ?? null,
+    };
+    applyLiveDevice('SystemAudio', value, previous, {
+      micDevice: previous.micDevice,
       systemDevice: value === 'default' ? null : value,
     });
   };
@@ -173,8 +217,21 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
   const [isStarting, setIsStarting] = useState(false);
 
   useEffect(() => {
-    if (isRecording || isStarting) setOpenLane(null);
-  }, [isRecording, isStarting]);
+    if (isStarting) setOpenLane(null);
+  }, [isStarting]);
+
+  const wasRecording = useRef(false);
+  useEffect(() => {
+    if (isRecording && !wasRecording.current) {
+      if (idleMicMuted) void invoke('set_microphone_muted', { muted: true }).catch(() => undefined);
+      if (idleSystemMuted) void invoke('set_system_audio_muted', { muted: true }).catch(() => undefined);
+    }
+    if (!isRecording && wasRecording.current) {
+      setIdleMicMuted(false);
+      setIdleSystemMuted(false);
+    }
+    wasRecording.current = isRecording;
+  }, [idleMicMuted, idleSystemMuted, isRecording]);
   const [isStopping, setIsStopping] = useState(false);
   const [isPausing, setIsPausing] = useState(false);
   const [isResuming, setIsResuming] = useState(false);
@@ -236,6 +293,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
     // only ever read, never set, so the spinner never appeared and the button
     // looked unresponsive during model load.
     setIsStarting(true);
+    await invoke('stop_audio_level_monitoring').catch(() => undefined);
 
     try {
       // Call the validation callback which will:
@@ -696,7 +754,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
 
                       <div className="h-8 w-px shrink-0 self-center bg-white/10" />
 
-                      <div className={`flex items-center gap-2 ${isRecording ? 'min-w-0 flex-1' : 'shrink-0'}`}>
+                      <div className={`flex items-center gap-2 transition-[flex-grow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${isRecording ? 'min-w-0 flex-1' : 'shrink-0'}`}>
                         <RecordingVoiceLane
                           kind="mic"
                           open={openLane === 'mic'}
@@ -709,12 +767,15 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                           onSelect={chooseMic}
                           disabled={isStarting || isValidatingModel}
                           gain={micGain}
-                          onGainLive={setMicGain}
-                          onGainCommit={(value) => saveGain('mic', value)}
+                          onGainLive={(value) => scheduleGain('mic', value, false)}
+                          onGainCommit={(value) => scheduleGain('mic', value, true)}
                           live={isRecording}
-                          muted={isMicrophoneMuted}
+                          muted={isRecording ? isMicrophoneMuted : idleMicMuted}
                           meterActive={isRecording && !isPaused && !isMicrophoneMuted}
-                          onMute={() => { void handleMicrophoneMute(); }}
+                          onMute={() => {
+                            if (isRecording) void handleMicrophoneMute();
+                            else setIdleMicMuted((current) => !current);
+                          }}
                         />
                         <RecordingVoiceLane
                           kind="output"
@@ -728,13 +789,16 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                           onSelect={chooseSystem}
                           disabled={isStarting || isValidatingModel}
                           gain={systemGain}
-                          onGainLive={setSystemGain}
-                          onGainCommit={(value) => saveGain('system', value)}
+                          onGainLive={(value) => scheduleGain('system', value, false)}
+                          onGainCommit={(value) => scheduleGain('system', value, true)}
                           macDefaultOutput={isMacOS}
                           live={isRecording}
-                          muted={isSystemAudioMuted}
+                          muted={isRecording ? isSystemAudioMuted : idleSystemMuted}
                           meterActive={isRecording && !isPaused && !isSystemAudioMuted}
-                          onMute={() => { void handleSystemAudioMute(); }}
+                          onMute={() => {
+                            if (isRecording) void handleSystemAudioMute();
+                            else setIdleSystemMuted((current) => !current);
+                          }}
                         />
                       </div>
                     </div>

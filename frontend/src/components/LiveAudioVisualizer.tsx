@@ -37,16 +37,36 @@ interface LiveAudioVisualizerProps {
   /** Stretch the bars to fill the container width instead of a fixed 3px each. */
   fill?: boolean;
   className?: string;
+  /**
+   * Preview samples (device picker) instead of the recording-audio-levels event.
+   * `tick` advances once per sample so the history scrolls the same way as live.
+   */
+  feedRms?: number;
+  feedPeak?: number;
+  feedTick?: number;
+  /** Multiplies the drawn level. Preview meters use this so the slider changes the graph immediately. */
+  displayGain?: number;
+}
+
+const SILENCE_DB = -50;
+const FULL_DB = -16;
+
+/** Linear amplitude from an RMS/peak pair. Speech on a raw device is often well below 0.05. */
+function amplitudeOf(rms: number, peak: number): number {
+  return Math.max(0, peak, rms * 1.45);
 }
 
 /**
- * Map a raw RMS/peak pair (roughly 0..1, but usually quite small for normalized
- * audio) into a 0..1 visual level. Peak-forward with an RMS floor so quiet
- * speech still registers, clamped to 1.0.
+ * Map amplitude to a 0..1 meter using a speech-range decibel scale.
+ * -56 dB sits on the floor. About -30 dB (normal speech) is mid-meter.
+ * -9 dB is full. `gain` is the volume slider, applied before the decibel
+ * conversion so the bars show output level, not the raw input.
  */
-function toLevel(rms: number, peak: number): number {
-  const v = Math.max(peak * 1.25, rms * 3.5);
-  return Math.min(1, Math.max(0, v));
+function visualLevel(amplitude: number, gain = 1): number {
+  const output = amplitude * Math.max(0.05, gain);
+  const db = 20 * Math.log10(Math.max(output, 1e-6));
+  const span = (db - SILENCE_DB) / (FULL_DB - SILENCE_DB);
+  return Math.min(1, Math.max(0, span));
 }
 
 /**
@@ -63,7 +83,12 @@ export function LiveAudioVisualizer({
   bars = 6,
   fill = false,
   className = '',
+  feedRms,
+  feedPeak,
+  feedTick,
+  displayGain = 1,
 }: LiveAudioVisualizerProps) {
+  const previewMode = feedTick !== undefined;
   const [levels, setLevels] = useState<number[]>(() => new Array(bars).fill(0));
   const [limiterWarning, setLimiterWarning] = useState(false);
   const levelsRef = useRef<number[]>(new Array(bars).fill(0));
@@ -79,6 +104,16 @@ export function LiveAudioVisualizer({
   }, [bars]);
 
   useEffect(() => {
+    if (!previewMode) return;
+    const level = amplitudeOf(feedRms ?? 0, feedPeak ?? 0);
+    const next = levelsRef.current.slice(1);
+    next.push(level);
+    levelsRef.current = next;
+    setLevels(next);
+  }, [previewMode, feedTick, feedRms, feedPeak]);
+
+  useEffect(() => {
+    if (previewMode) return;
     if (!active) {
       const idle = new Array(bars).fill(0);
       levelsRef.current = idle;
@@ -103,7 +138,7 @@ export function LiveAudioVisualizer({
           const payload = event.payload;
           if (payload.source !== source) return;
 
-          const level = toLevel(payload.rms, payload.peak);
+          const level = amplitudeOf(payload.rms, payload.peak);
           const next = levelsRef.current.slice(1);
           next.push(level);
           levelsRef.current = next;
@@ -150,7 +185,7 @@ export function LiveAudioVisualizer({
         limiterClearTimerRef.current = null;
       }
     };
-  }, [active, source, bars]);
+  }, [active, source, bars, previewMode]);
 
   const barColor = limiterWarning
     ? 'bg-amber-400'
@@ -166,18 +201,21 @@ export function LiveAudioVisualizer({
       aria-label={`${source === 'mic' ? 'Microphone' : 'System'} audio level${limiterWarning ? '. Too loud.' : ''}`}
       title={limiterWarning ? warningText : undefined}
     >
-      {levels.map((level, index) => (
+      {levels.map((level, index) => {
+        const shown = visualLevel(level, displayGain);
+        return (
         <div
           key={index}
           className={`${fill ? 'flex-1 min-w-[2px]' : 'w-[3px]'} rounded-sm transition-[height,opacity] duration-100 ease-out ${
             active ? barColor : 'bg-gray-500'
           }`}
           style={{
-            height: `${Math.max(12, level * 100)}%`,
-            opacity: active ? 0.45 + level * 0.55 : 0.3,
+            height: `${Math.max(4, shown * 100)}%`,
+            opacity: active ? 0.45 + shown * 0.55 : 0.3,
           }}
         />
-      ))}
+        );
+      })}
       {limiterWarning && <span role="status" className="sr-only">{warningText}</span>}
     </div>
   );

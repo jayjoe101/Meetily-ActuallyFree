@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { FolderCog, FolderOpen } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
-import { DeviceSelection, SelectedDevices } from '@/components/DeviceSelection';
 import Analytics from '@/lib/analytics';
 import { toast } from 'sonner';
 import { useConfig } from '@/contexts/ConfigContext';
@@ -92,44 +91,6 @@ export function RecordingSettings({ onSave }: RecordingSettingsProps) {
     // Track auto-save setting change
     await Analytics.track('auto_save_recording_toggled', {
       enabled: enabled.toString()
-    });
-  };
-
-
-  const handleMicGainChange = async (value: number) => {
-    const mic_gain = Math.min(3, Math.max(0.5, value));
-    const newPreferences = { ...preferences, mic_gain };
-    setPreferences(newPreferences);
-    await savePreferences(newPreferences);
-  };
-
-  const handleSystemGainChange = async (value: number) => {
-    const system_gain = Math.min(3, Math.max(0.5, value));
-    const newPreferences = { ...preferences, system_gain };
-    setPreferences(newPreferences);
-    await savePreferences(newPreferences);
-  };
-
-  const handleDeviceChange = async (devices: SelectedDevices) => {
-    const newPreferences = {
-      ...preferences,
-      preferred_mic_device: devices.micDevice,
-      preferred_system_device: devices.systemDevice
-    };
-    setPreferences(newPreferences);
-    // The home recording card reads this from ConfigContext. Update it now,
-    // before the save round-trip, so the card matches Settings immediately.
-    setSelectedDevices({
-      micDevice: devices.micDevice,
-      systemDevice: devices.systemDevice,
-    });
-    await savePreferences(newPreferences);
-
-    // Track default device preference changes
-    // Note: Individual device selection analytics are tracked in DeviceSelection component
-    await Analytics.track('default_devices_changed', {
-      has_preferred_microphone: (!!devices.micDevice).toString(),
-      has_preferred_system_audio: (!!devices.systemDevice).toString()
     });
   };
 
@@ -242,96 +203,6 @@ export function RecordingSettings({ onSave }: RecordingSettingsProps) {
         />
       </div>
 
-
-      {/* Mic gain — boost local voice after loudness normalize */}
-      <div className="min-w-0 space-y-3 rounded-lg border p-4">
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="font-medium">Microphone gain</div>
-            <div className="text-sm text-gray-600 break-words">
-              Boost your voice if it sounds quiet next to system audio (0.5×–3×)
-            </div>
-          </div>
-          <span className="shrink-0 text-sm font-semibold tabular-nums text-[var(--af-text)]">
-            {(preferences.mic_gain ?? 1).toFixed(1)}×
-          </span>
-        </div>
-        <input
-          type="range"
-          min={0.5}
-          max={3}
-          step={0.1}
-          value={preferences.mic_gain ?? 1}
-          disabled={saving}
-          onChange={(e) => {
-            const v = parseFloat(e.target.value);
-            setPreferences((p) => ({ ...p, mic_gain: v }));
-          }}
-          onMouseUp={(e) => void handleMicGainChange(parseFloat((e.target as HTMLInputElement).value))}
-          onTouchEnd={(e) => void handleMicGainChange(parseFloat((e.target as HTMLInputElement).value))}
-          onBlur={(e) => void handleMicGainChange(parseFloat(e.target.value))}
-          className="w-full min-w-0 max-w-full accent-[var(--af-accent,#4a8bff)]"
-        />
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
-          <span>Quieter</span>
-          <button
-            type="button"
-            className="underline hover:text-gray-800"
-            disabled={saving}
-            onClick={() => void handleMicGainChange(1)}
-          >
-            Reset 1.0×
-          </button>
-          <span>Louder</span>
-        </div>
-      </div>
-
-      {/* System gain — applied before meters, transcription, and saved tracks */}
-      <div className="min-w-0 space-y-3 rounded-lg border p-4">
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="font-medium">System audio gain</div>
-            <div className="text-sm text-gray-600 break-words">
-              Balance other participants and computer audio (0.5×–3×)
-            </div>
-          </div>
-          <span className="shrink-0 text-sm font-semibold tabular-nums text-[var(--af-text)]">
-            {(preferences.system_gain ?? 1).toFixed(1)}×
-          </span>
-        </div>
-        <input
-          type="range"
-          min={0.5}
-          max={3}
-          step={0.1}
-          value={preferences.system_gain ?? 1}
-          disabled={saving}
-          onChange={(e) => {
-            const v = parseFloat(e.target.value);
-            setPreferences((p) => ({ ...p, system_gain: v }));
-          }}
-          onMouseUp={(e) => void handleSystemGainChange(parseFloat((e.target as HTMLInputElement).value))}
-          onTouchEnd={(e) => void handleSystemGainChange(parseFloat((e.target as HTMLInputElement).value))}
-          onBlur={(e) => void handleSystemGainChange(parseFloat(e.target.value))}
-          className="w-full min-w-0 max-w-full accent-[var(--af-accent,#4a8bff)]"
-        />
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
-          <span>Quieter</span>
-          <button
-            type="button"
-            className="underline hover:text-gray-800"
-            disabled={saving}
-            onClick={() => void handleSystemGainChange(1)}
-          >
-            Reset 1.0×
-          </button>
-          <span>Louder</span>
-        </div>
-        <p className="text-xs text-amber-700">
-          If boosted audio repeatedly hits the safety limiter, the live system meter warns you to lower this gain or playback volume.
-        </p>
-      </div>
-
       {/* Folder Location - Only shown when auto_save is enabled */}
       {preferences.auto_save && (
         <div className="min-w-0 space-y-4">
@@ -380,26 +251,6 @@ export function RecordingSettings({ onSave }: RecordingSettingsProps) {
         </div>
       )}
 
-      {/* Device Preferences */}
-      <div className="space-y-4">
-        <div className="border-t pt-6">
-          <h4 className="text-base font-medium text-gray-900 mb-4">Default Audio Devices</h4>
-          <p className="text-sm text-gray-600 mb-4">
-            Set your preferred microphone and system audio devices for recording. These will be automatically selected when starting new recordings.
-          </p>
-
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <DeviceSelection
-              selectedDevices={{
-                micDevice: preferences.preferred_mic_device,
-                systemDevice: preferences.preferred_system_device
-              }}
-              onDeviceChange={handleDeviceChange}
-              disabled={saving}
-            />
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
